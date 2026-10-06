@@ -15,6 +15,9 @@ services:
       - type: bind
         source: ./mcp/
         target: /mcp/
+      - type: bind
+        source: ./librechat.yaml
+        target: /app/librechat.yaml
     networks:
       - librechat-net
       - default
