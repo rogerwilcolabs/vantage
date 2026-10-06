@@ -1,0 +1,70 @@
+version: 1.3.13
+cache: true
+fileStrategy: 's3'
+# Custom interface configuration
+interface:
+  customWelcome: 'Welcome to Vantage!'
+  fileSearch: true
+  privacyPolicy:
+    externalUrl: 'https://www.rogerwilco.co.za/sites/default/files/2025-05/website-privacy-policy--2025-05.pdf'
+    openNewTab: true
+
+  # Terms of service
+  termsOfService:
+    externalUrl: 'https://www.rogerwilco.co.za/sites/default/files/2025-05/website-privacy-policy--2025-05.pdf'
+    openNewTab: true
+    modalAcceptance: true
+    modalTitle: 'Terms of Service for Vantage'
+    modalContent: |
+      # Terms of Service for Vantage
+
+      - AI Assistant Disclaimer
+
+        - This assistant is a tool that helps you find and understand information on this website. It draws its answers from this site's pages and from documents the website owner has provided. It's here for convenience only. It is designed to summarise, explain, suggest links, and point you in the right direction, in response to your queries or prompts.
+      
+      - Please know that the AI Assistant:
+        - Can make mistakes. AI tools sometimes misunderstand questions, miss important details, or make things up. Please treat its answers as a helpful starting point only. Please validate any response provided by the AI Assistant before you rely on it.
+        - Does not provide advice or make offers. Nothing the assistant says is legal, financial, medical, or other professional advice, and it does not create a binding statement or offer from anyone.
+      - Please do not share sensitive information. Please don't enter passwords, ID or card numbers, financial details, or medical information into the chat.
+      - Please use the AI Assistant fairly. Do not try to manipulate, circumvent, scrape, or reverse-engineer the AI Assistant.
+      - The assistant is provided "as is," and without any guarantees. To the fullest extent the law allows, neither the website owner nor the company providing the AI technology will be responsible for any loss or damage arising from your use of this AI Assistant or your reliance of the assistant's responses.
+      - By using this assistant, you accept these terms.
+
+mcpServers:
+  canal_walk_stores:
+    command: "node"
+    args:
+      - "/mcp/hyprop/canal-walk-stores/index.js"
+  data-repo:
+    type: sse
+    url: https://clickhouse-mcp-data.rw1.co.za/sse
+  socialcrawl:
+    type: stdio
+    command: npx
+    args:
+      - -y
+      - socialcrawl-mcp
+    env:
+      SOCIALCRAWL_API_KEY: "${SOCIALCRAWL_API_KEY}"
+  xpoz-mcp:
+    type: "streamable-http"
+    url: "https://mcp.xpoz.ai/mcp"
+    headers:
+      Authorization: "Bearer ${XPOZ_API_TOKEN}"
+
+endpoints:
+  agents:
+    capabilities:
+      - 'deferred_tools'
+      - 'programmatic_tools'
+      - 'execute_code'
+      - 'file_search'
+      - 'web_search'
+      - 'artifacts'
+      - 'subagents'
+      - 'actions'
+      - 'context'
+      - 'skills'
+      - 'tools'
+      - 'chain'
+      - 'ocr'

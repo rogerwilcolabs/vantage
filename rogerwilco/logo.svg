@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Round SVG with White Background -->
+  <circle cx="256" cy="256" r="250" fill="#FFFFFF" />
+  
+  <!-- Really dark gray V - Movie Title Serif Style -->
+  <path d="M110 130 
+           h95 
+           l10 30 
+           l51 175 
+           l51 -175 
+           l10 -30 
+           h95 
+           v15 
+           h-25 
+           l-100 300 
+           h-16 
+           l-100 -300 
+           h-25 
+           z" 
+        fill="#1A1A1A" />
+</svg>

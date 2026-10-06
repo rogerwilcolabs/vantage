@@ -1,0 +1,27 @@
+services:
+  api:
+    image: librechat
+    build:
+      context: .
+      target: node
+      dockerfile: ./rogerwilco/DockerfileRogerwilco
+    volumes:
+      - type: bind
+        source: /tmp/
+        target: /tmp/
+      - type: bind
+        source: /mnt/data/
+        target: /mnt/data/
+      - type: bind
+        source: ./mcp/
+        target: /mcp/
+    networks:
+      - librechat-net
+      - default
+  rag_api:
+    image: registry.librechat.ai/danny-avila/librechat-rag-api-dev:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+networks:
+  librechat-net:
+    external: true
