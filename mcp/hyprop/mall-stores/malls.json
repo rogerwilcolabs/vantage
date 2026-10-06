@@ -1,0 +1,93 @@
+{
+  "canal-walk": {
+    "name": "Canal Walk",
+    "domain": "canalwalk.co.za",
+    "id": "a0e878f8-8443-423c-a4fc-17c82b97fb9b",
+    "categoryPages": {
+      "fashion-and-footwear": "fashion-and-footwear",
+      "womens-fashion": "fashion-for-women",
+      "mens-fashion": "fashion-for-men",
+      "unisex-fashion": "unisex-fashion",
+      "sneakers": "sneakers",
+      "footwear": null,
+      "childrens-fashion": null,
+      "food-and-beverages": "food-and-beverages-stores",
+      "takeaway-and-delivery-services": "takeaway-and-delivery",
+      "halaal": "halaal-options",
+      "fast-food-and-confectionary": "fast-food-and-confectionary",
+      "restaurants": "restaurants",
+      "speciality": "speciality-stores",
+      "coffee-shops": "coffee-shops",
+      "health-food": null,
+      "liquor": "liquor-stores",
+      "groceries-and-supermarkets": null,
+      "speciality-shops-and-services": "speciality-shops-and-services",
+      "tobacconists-and-e-cigarettes": "tobacconists",
+      "leather-and-luggage": "leather-and-luggage-stores",
+      "travel": "travel-services",
+      "pet-shops": "pet-shops",
+      "health-hair-and-beauty": "health-hair-and-beauty-services",
+      "fragrances-and-cosmetics": "fragrances-and-cosmetics",
+      "beauty-salon": "beauty-salons",
+      "health-and-wellness": "health-and-wellness",
+      "hair-salon": "hair-salons",
+      "barber": "barber-services",
+      "sport-fitness-and-lifestyle": "sports-and-fitness",
+      "technology": "technology-stores",
+      "jewellery-and-accessories": "jewellery-and-accessories",
+      "home-and-decor": "home-and-decor-stores",
+      "cellular-service": "cellular-services",
+      "new-stores": "new-stores",
+      "department-stores": "department-stores",
+      "books-cards-and-gifts": "books-cards-and-gifts",
+      "eyewear-and-optometrists": "eyewear-and-optometrists",
+      "toys-and-hobbies": "toys-and-hobbies",
+      "banks-and-forex": "banks-and-forex",
+      "movies-and-entertainment": "movies-and-entertainment",
+      "centre-management": "centre-management",
+      "offices": null
+    }
+  },
+  "rosebank-mall": {
+    "name": "Rosebank Mall",
+    "domain": "rosebankmall.co.za",
+    "id": "d29b471f-375e-4bd3-ab6c-85fea74ad38e",
+    "categoryPages": {}
+  },
+  "the-glen": {
+    "name": "The Glen",
+    "domain": "theglenshopping.co.za",
+    "id": "c9ba5816-86fe-41a8-ae04-81b422e9e998",
+    "categoryPages": {}
+  },
+  "woodlands": {
+    "name": "Woodlands Boulevard",
+    "domain": "woodlandsboulevard.co.za",
+    "id": "de2b5304-d22a-43b0-bffe-2307ba1fb764",
+    "categoryPages": {}
+  },
+  "clearwater-mall": {
+    "name": "Clearwater Mall",
+    "domain": "clearwatermall.co.za",
+    "id": "f4b417b2-ec35-4e69-9145-1a50adc97103",
+    "categoryPages": {}
+  },
+  "somerset-mall": {
+    "name": "Somerset Mall",
+    "domain": "somersetmall.co.za",
+    "id": "45626cb4-960e-45cc-8f3a-a8fab4d0bcca",
+    "categoryPages": {}
+  },
+  "table-bay-mall": {
+    "name": "Table Bay Mall",
+    "domain": "tablebaymall.co.za",
+    "id": "e65c83cd-9f1b-46ca-8c78-fb11f07b78a1",
+    "categoryPages": {}
+  },
+  "capegate": {
+    "name": "CapeGate",
+    "domain": "capegatecentre.co.za",
+    "id": "93a44011-717d-4fc1-99df-52dbbdde6c1b",
+    "categoryPages": {}
+  }
+}
