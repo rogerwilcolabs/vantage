@@ -530,6 +530,24 @@ describe.each([
     );
   });
 
+  it('keeps tel: and mailto: links but still strips javascript: links', () => {
+    const content =
+      'Call [(021) 000 0000](tel:+27210000000), email [us](mailto:info@example.com) or [click](javascript:alert(1)).';
+    const { container } = renderMessage(content);
+    const view = within(container);
+    expect(view.getByRole('link', { name: '(021) 000 0000' })).toHaveAttribute(
+      'href',
+      'tel:+27210000000',
+    );
+    expect(view.getByRole('link', { name: 'us' })).toHaveAttribute(
+      'href',
+      'mailto:info@example.com',
+    );
+    expect(view.getByText('click').closest('a')?.getAttribute('href') ?? '').not.toMatch(
+      /^javascript:/i,
+    );
+  });
+
   it('keeps the separator between adjacent raw HTML blocks', () => {
     const content = '<div>one</div>\n\n<div>two</div>';
     const { container: oldC } = render(

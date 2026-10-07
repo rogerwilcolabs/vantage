@@ -1,0 +1,15 @@
+{
+  "name": "hyprop-mall-stores",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP server with trimmed, cached shop and centre data for one Hyprop mall.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "google-auth-library": "^11.1.0"
+  }
+}

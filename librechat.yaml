@@ -34,7 +34,11 @@ mcpServers:
   canal_walk_stores:
     command: "node"
     args:
-      - "/mcp/hyprop/canal-walk-stores/index.js"
+      - "/mcp/hyprop/mall-stores/index.js"
+    env:
+      MALL: "canal-walk"
+      # Enables the web_search tool; uses the same service account as the Google endpoint.
+      GOOGLE_SERVICE_KEY_FILE: "${GOOGLE_SERVICE_KEY_FILE}"
   data-repo:
     type: sse
     url: https://clickhouse-mcp-data.rw1.co.za/sse
