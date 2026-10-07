@@ -163,12 +163,12 @@ export default function Presentation({ children }: { children: React.ReactNode }
               WebkitMaskImage: 'url("/assets/vantage-banner.png")',
               WebkitMaskSize: 'contain',
               WebkitMaskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
+              WebkitMaskPosition: 'right',
               
               maskImage: 'url("/assets/vantage-banner.png")',
               maskSize: 'contain',
               maskRepeat: 'no-repeat',
-              maskPosition: 'center'
+              maskPosition: 'right'
             }}
           />
 
