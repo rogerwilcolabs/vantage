@@ -38,7 +38,7 @@ const tools = [
   {
     name: 'get_category',
     description:
-      `With no category, lists every shop category at ${mall.name} with its number of shops and its page on the website. ` +
+      `With no category, gives the total number of shops at ${mall.name} and lists every shop category with its number of shops and its page on the website. ` +
       'With a category, returns its total number of shops, its page, and every shop in it with its link and floor.',
     inputSchema: {
       type: 'object',

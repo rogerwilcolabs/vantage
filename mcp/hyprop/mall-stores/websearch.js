@@ -8,7 +8,9 @@ import { GoogleAuth } from 'google-auth-library';
 
 const MODEL = process.env.WEB_SEARCH_MODEL || 'gemini-3.5-flash';
 const LOCATION = process.env.WEB_SEARCH_LOCATION || 'global';
-const TIMEOUT_MS = 25_000;
+const THINKING = process.env.WEB_SEARCH_THINKING || 'MINIMAL';
+// The shopper is waiting on the whole answer; past this, the agent answers without the web.
+const TIMEOUT_MS = Number(process.env.WEB_SEARCH_TIMEOUT_MS) || 12_000;
 const CACHE_MS = 6 * 60 * 60 * 1000;
 const CACHE_SIZE = 200;
 
@@ -58,7 +60,7 @@ export function createWebSearch(mall) {
           contents: [{ role: 'user', parts: [{ text: question }] }],
           tools: [{ googleSearch: {} }],
           ...(/gemini-([3-9]|\d{2,})/.test(MODEL) && {
-            generationConfig: { thinkingConfig: { thinkingLevel: 'LOW' } },
+            generationConfig: { thinkingConfig: { thinkingLevel: THINKING } },
           }),
         }),
       });

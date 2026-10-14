@@ -394,7 +394,14 @@ export function createMallData(mall) {
           ...summary(c),
           subcategories: c.children.length ? c.children.map(summary) : undefined,
         }));
-      if (!String(category ?? '').trim()) return { categories: everyCategory() };
+      if (!String(category ?? '').trim()) {
+        // The overall count, so "how many shops are there?" needs no web search.
+        return {
+          total_shops: shops.filter((s) => !s.closed).length,
+          all_shops_page: `${mall.site}/shops`,
+          categories: everyCategory(),
+        };
+      }
 
       const matches = findCategories(category, flat);
       if (!matches.length) {

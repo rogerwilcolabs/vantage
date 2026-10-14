@@ -101,6 +101,9 @@ const all = await call('get_category');
 check('category list', () =>
   assert.ok(all.categories.length >= 15 && all.categories.every((c) => c.count > 0)),
 );
+check('category list carries the total number of open shops', () =>
+  assert.ok(all.total_shops > 300 && all.all_shops_page === 'https://canalwalk.co.za/shops'),
+);
 
 const found = await call('get_shop', {
   names: ['Woolworths', 'Paul', 'Vida E Café', 'Dischem', 'Absa', 'Ocean Basket', 'Kids Emporium'],
