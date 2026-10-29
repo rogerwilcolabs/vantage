@@ -9,6 +9,7 @@
     "test": "node test.js"
   },
   "dependencies": {
+    "@mappedin/mappedin-js": "6.30.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "google-auth-library": "^11.1.0"
   }

@@ -2,21 +2,25 @@ import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
-// Runs the server over stdio, as LibreChat does, against the live Canal Walk feeds.
+// Runs the server over stdio, as LibreChat does, against the live Canal Walk feeds and map.
 // Usage: node test.js (MALL defaults to canal-walk here; the checks below are Canal Walk's)
 
-const transport = new StdioClientTransport({
-  command: 'node',
-  args: ['index.js'],
-  cwd: import.meta.dirname,
-  env: { ...process.env, MALL: process.env.MALL || 'canal-walk' },
-});
-const client = new Client({ name: 'test-client', version: '1.0.0' }, { capabilities: {} });
-await client.connect(transport);
+const connect = async (env = {}) => {
+  const transport = new StdioClientTransport({
+    command: 'node',
+    args: ['index.js'],
+    cwd: import.meta.dirname,
+    env: { ...process.env, MALL: process.env.MALL || 'canal-walk', ...env },
+  });
+  const client = new Client({ name: 'test-client', version: '1.0.0' }, { capabilities: {} });
+  await client.connect(transport);
+  return client;
+};
+const client = await connect();
 
-const call = async (name, args = {}) => {
+const call = async (name, args = {}, on = client) => {
   const started = performance.now();
-  const result = await client.callTool({ name, arguments: args });
+  const result = await on.callTool({ name, arguments: args });
   const ms = performance.now() - started;
   const text = result.content[0].text;
   assert.ok(!result.isError, `${name} failed: ${text}`);
@@ -34,12 +38,13 @@ const hasSearchKey = Boolean(process.env.GOOGLE_SERVICE_KEY_FILE);
 const { tools } = await client.listTools();
 check(
   hasSearchKey
-    ? 'five tools, with web_search'
-    : 'four tools (no GOOGLE_SERVICE_KEY_FILE, so no web_search)',
+    ? 'six tools, with web_search'
+    : 'five tools (no GOOGLE_SERVICE_KEY_FILE, so no web_search)',
   () =>
     assert.deepEqual(tools.map((t) => t.name).sort(), [
       'get_category',
       'get_centre_info',
+      'get_directions',
       'get_shop',
       'get_shop_links',
       ...(hasSearchKey ? ['web_search'] : []),
@@ -164,5 +169,76 @@ check('security contact with a tel: link', () =>
   ),
 );
 
+// Directions, from the live Mappedin map the website uses.
+const route = await call('get_directions', { from: 'Woolworths Café', to: 'Miladys' });
+console.log(route.steps.map((s, i) => `    ${i + 1}. ${s}`).join('\n'));
+check('route on one floor, merged the way the website shows it', () => {
+  assert.equal(route.from.floor, 'Lower Level');
+  assert.equal(route.to.floor, 'Lower Level');
+  assert.match(
+    route.steps[0],
+    /^Leave Woolworths Café and walk \d+ m \((about \d+ minutes?|less than a minute)\)$/,
+  );
+  assert.equal(route.steps.at(-1), 'Arrive at Miladys');
+  assert.ok(route.steps.length >= 3 && route.steps.length <= 6, `${route.steps.length} steps`);
+  assert.equal(route.walking_time, 'about 4 minutes');
+});
+check('map link opens the website map with the route and its steps', () =>
+  assert.equal(
+    route.map_link,
+    'https://canalwalk.co.za/mall-map#/directions?to=miladys&from=woolworths-cafe&textDirectionsVisible=true',
+  ),
+);
+
+const upstairs = await call('get_directions', { from: 'Woolworths Café', to: 'Ackermans' });
+console.log(upstairs.steps.map((s, i) => `    ${i + 1}. ${s}`).join('\n'));
+check('route to another floor takes the escalator', () => {
+  assert.equal(upstairs.to.floor, 'Upper Level');
+  assert.ok(upstairs.steps.some((s) => /^Take the escalator up to the Upper Level/.test(s)));
+});
+
+const accessible = await call('get_directions', {
+  from: 'Woolworths Café',
+  to: 'Ackermans',
+  accessible: true,
+});
+console.log(accessible.steps.map((s, i) => `    ${i + 1}. ${s}`).join('\n'));
+check('accessible route avoids escalators and stairs', () => {
+  assert.equal(accessible.accessible, true);
+  assert.ok(!accessible.steps.some((s) => /escalator|stairs/.test(s)));
+  assert.ok(accessible.steps.some((s) => /^Take the (lift|ramp)/.test(s)));
+});
+
+const toilets = await call('get_directions', { from: 'Miladys', to: 'bathroom' });
+check('places that are not shops, by another name, with their map id in the link', () => {
+  assert.equal(toilets.to.name, 'Toilets');
+  assert.match(toilets.map_link, /to=LOC-[A-Z0-9]+&from=miladys/);
+});
+
+const entrance = await call('get_directions', { from: 'entrance', to: 'Miladys' });
+check('"entrance" starts from the nearest entrance', () =>
+  assert.match(entrance.from.name, /^Entrance \d+/),
+);
+
+const unknown = await call('get_directions', { from: 'Kids Emporium', to: 'Miladys' });
+check('a place that is not at the centre is not found', () => {
+  assert.equal(unknown.from.found, false);
+  assert.equal(unknown.steps, undefined);
+});
+
 await client.close();
+
+// A key Mappedin rejects (as when Hyprop changes it): the answer falls back to floors and the map link, and the
+// cause is logged to stderr.
+const badKey = await connect({ MAPPEDIN_SECRET: 'not-the-secret' });
+const fallback = await call('get_directions', { from: 'Woolworths Café', to: 'Miladys' }, badKey);
+check('rejected key: floors and the map link, no steps, nothing about the error', () => {
+  assert.equal(fallback.steps_available, false);
+  assert.equal(fallback.steps, undefined);
+  assert.equal(fallback.from.floor, 'Lower Level');
+  assert.equal(fallback.map_link, route.map_link);
+  assert.doesNotMatch(JSON.stringify(fallback), /401|unauthori|secret|error/i);
+});
+await badKey.close();
+
 console.log('\nAll checks passed.');
