@@ -1,12 +1,18 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { createDirections } from './directions.js';
 import { createMallData, loadMall } from './shops.js';
 import { createWebSearch } from './websearch.js';
+
+// stdout carries the MCP protocol, so anything a library prints there (the Mappedin SDK has console.log calls)
+// goes to stderr with the rest of the logs.
+console.log = console.info = console.debug = console.error;
 
 // One server per mall: set MALL to a key in malls.json (e.g. canal-walk) in librechat.yaml.
 const mall = loadMall(process.env.MALL);
 const data = createMallData(mall);
+const directions = createDirections(mall, data);
 // Only offered when GOOGLE_SERVICE_KEY_FILE is passed in.
 const webSearch = createWebSearch(mall);
 
@@ -59,6 +65,34 @@ const tools = [
     inputSchema: { type: 'object', properties: {} },
     run: () => data.getCentreInfo(),
   },
+  {
+    name: 'get_directions',
+    description:
+      `Walking directions inside ${mall.name} from one place to another: numbered steps with distances and the shops ` +
+      "you pass, the walking time, each place's floor, and a link to the mall map with the route drawn. " +
+      "Places can be shops (names as for get_shop), entrances (e.g. 'Entrance 3'), toilets, parking, the information desk or an ATM. " +
+      'steps_available: false means only the floors and the map link could be given.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        from: {
+          type: 'string',
+          description: 'Where they are starting: a shop name or a place such as an entrance.',
+        },
+        to: {
+          type: 'string',
+          description: 'Where they want to go: a shop name or a place such as the toilets.',
+        },
+        accessible: {
+          type: 'boolean',
+          description:
+            'A route without stairs or escalators, for a wheelchair or pram, or when they ask for the lift.',
+        },
+      },
+      required: ['from', 'to'],
+    },
+    run: (args) => directions.getDirections(args),
+  },
   webSearch && {
     name: 'web_search',
     description:
@@ -97,6 +131,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// Load both feeds at startup so the first question does not wait for them.
+// Load the feeds and the map at startup so the first question does not wait for them.
 data.warm();
+directions.warm();
 await server.connect(new StdioServerTransport());

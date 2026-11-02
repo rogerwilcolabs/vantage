@@ -81,7 +81,7 @@ function cached(label, load) {
   };
 }
 
-async function fetchJson(url) {
+export async function fetchJson(url) {
   const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
   if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
   return res.json();
@@ -199,6 +199,8 @@ function indexShop(raw, mall) {
   return {
     key: normName(raw.title),
     name: raw.title.trim(),
+    // Also the shop's id on the Mappedin mall map (directions.js).
+    slug: raw.slug,
     url: `${mall.site}/shop/${raw.slug}`,
     floor: general.level?.trim() || undefined,
     // The shop's main category is only in `category`; Halaal and similar sit one level down, in `child`.
@@ -434,5 +436,11 @@ export function createMallData(mall) {
     },
 
     getCentreInfo: () => centre(),
+
+    /** The feed's listings for a shop name, as get_shop finds them (for directions.js). */
+    async findShopListings(name) {
+      const { shops } = await storeList();
+      return findShops(name, shops);
+    },
   };
 }
