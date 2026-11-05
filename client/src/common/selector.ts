@@ -12,6 +12,8 @@ export interface Endpoint {
   modelIcons?: Record<string, string | undefined>;
   showMarketplace?: boolean;
   searchAliases?: string[];
+  /** Set on an agents menu that lists only the agents in this category. */
+  agentCategory?: string;
 }
 
 export interface SelectedValues {

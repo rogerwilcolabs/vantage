@@ -755,6 +755,86 @@ export const getAgentCategories = (): Promise<t.TMarketplaceCategory[]> => {
 };
 
 /**
+ * Admin only: every agent category, hidden ones included
+ */
+export const getManagedAgentCategories = (): Promise<t.TManagedAgentCategory[]> => {
+  return request.get(endpoints.agents({ path: 'categories/manage' }));
+};
+
+export const createAgentCategory = (label: string): Promise<t.TManagedAgentCategory> => {
+  return request.post(endpoints.agents({ path: 'categories' }), { label });
+};
+
+export const updateAgentCategory = (
+  value: string,
+  data: t.TAgentCategoryUpdate,
+): Promise<t.TManagedAgentCategory> => {
+  return request.patch(endpoints.agents({ path: `categories/${encodeURIComponent(value)}` }), data);
+};
+
+export const reorderAgentCategories = (values: string[]): Promise<t.TManagedAgentCategory[]> => {
+  return request.put(endpoints.agents({ path: 'categories/order' }), { values });
+};
+
+export const deleteAgentCategory = (value: string): Promise<void> => {
+  return request.delete(endpoints.agents({ path: `categories/${encodeURIComponent(value)}` }));
+};
+
+const categoryAccessPath = (value: string) =>
+  endpoints.agents({ path: `categories/${encodeURIComponent(value)}/access` });
+
+export const getAgentCategoryAccess = (value: string): Promise<t.TAgentCategoryAccess> => {
+  return request.get(categoryAccessPath(value));
+};
+
+export const setAgentCategoryAccess = (
+  value: string,
+  principals: Array<{ type: string; id: string }>,
+): Promise<t.TAgentCategoryAccess> => {
+  return request.put(categoryAccessPath(value), { principals });
+};
+
+export const makeAgentCategoryPrivate = (value: string): Promise<t.TAgentCategoryAccess> => {
+  return request.post(`${categoryAccessPath(value)}/private`);
+};
+
+/* Admin groups */
+
+export const getAdminGroups = (): Promise<{ groups: t.TAdminGroup[]; total: number }> => {
+  return request.get(endpoints.adminGroups('?limit=200'));
+};
+
+export const createAdminGroup = (name: string): Promise<{ group: t.TAdminGroup }> => {
+  return request.post(endpoints.adminGroups(), { name });
+};
+
+export const deleteAdminGroup = (id: string): Promise<{ success: boolean }> => {
+  return request.delete(endpoints.adminGroups(`/${encodeURIComponent(id)}`));
+};
+
+export const getAdminGroupMembers = (
+  id: string,
+): Promise<{ members: t.TAdminGroupMember[]; total: number }> => {
+  return request.get(endpoints.adminGroups(`/${encodeURIComponent(id)}/members?limit=200`));
+};
+
+export const addAdminGroupMember = (
+  id: string,
+  userId: string,
+): Promise<{ group: t.TAdminGroup }> => {
+  return request.post(endpoints.adminGroups(`/${encodeURIComponent(id)}/members`), { userId });
+};
+
+export const removeAdminGroupMember = (
+  id: string,
+  userId: string,
+): Promise<{ success: boolean }> => {
+  return request.delete(
+    endpoints.adminGroups(`/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`),
+  );
+};
+
+/**
  * Unified marketplace agents endpoint with query string controls
  */
 export const getMarketplaceAgents = (params: {
