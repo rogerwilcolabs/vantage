@@ -23,6 +23,7 @@ import type {
 } from './config';
 import type { StatefulCodeEnvironment } from './stateful-code';
 import type { CodeApprovalMode } from './code/approval';
+import type { TPrincipal } from './accessPermissions';
 import type { EToolResources } from './types/tools';
 import type { RefillIntervalUnit } from './balance';
 import type { SettingDefinition } from './generate';
@@ -293,6 +294,60 @@ export type TCategory = {
 
 export type TMarketplaceCategory = TCategory & {
   count: number;
+};
+
+export const MAX_AGENT_CATEGORY_LABEL_LENGTH = 50;
+
+/** An agent category as admins manage it, hidden categories included. */
+export type TManagedAgentCategory = TMarketplaceCategory & {
+  order: number;
+  isActive: boolean;
+  /** Recreated on every startup, so it can be hidden but not deleted. */
+  builtIn: boolean;
+  /** How many users, groups and roles this category gives access to. */
+  accessCount: number;
+};
+
+/** Who a category gives access to; these principals can see and use all of its agents. */
+export type TAgentCategoryAccess = {
+  principals: TPrincipal[];
+  agentCount: number;
+  /** Agents shared with everyone, which everyone can see whatever the category allows. */
+  publicAgentCount: number;
+};
+
+export type TAdminGroup = {
+  _id: string;
+  name: string;
+  description?: string;
+  memberIds?: string[];
+};
+
+export type TAdminGroupMember = {
+  userId: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+};
+
+export type TAgentCategoryUpdate = {
+  label?: string;
+  isActive?: boolean;
+};
+
+export type AgentCategoryErrorCode =
+  | 'invalid_label'
+  | 'reserved_name'
+  | 'category_exists'
+  | 'category_not_found'
+  | 'category_protected'
+  | 'category_in_use'
+  | 'invalid_principal'
+  | 'invalid_request'
+  | 'internal_error';
+
+export type AgentCategoryError = {
+  response?: { data?: { code?: AgentCategoryErrorCode } };
 };
 
 export type TError = {

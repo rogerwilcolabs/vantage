@@ -5,10 +5,15 @@ import { CheckCircle2, MousePointerClick, SettingsIcon } from 'lucide-react';
 import { EModelEndpoint, isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { TModelSpec } from 'librechat-data-provider';
 import type { Endpoint } from '~/common';
+import {
+  filterModels,
+  getEndpointMenuKey,
+  isEndpointMenuSelected,
+  shouldRenderEndpointOption,
+} from '../utils';
 import { CustomMenu as Menu, CustomMenuItem as MenuItem, CustomMenuSeparator } from '../CustomMenu';
 import { renderEndpointModels, VIRTUALIZE_THRESHOLD } from './EndpointModelItem';
 import MarketplaceItem, { marketplaceSearchMatches } from './Marketplace';
-import { filterModels, shouldRenderEndpointOption } from '../utils';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import VirtualizedModelList from './VirtualizedModelList';
 import { useFavorites, useLocalize } from '~/hooks';
@@ -99,14 +104,14 @@ function EndpointMenuContent({
   const { agentsMap, assistantsMap, modelSpecs, selectedValues, endpointSearchValues } =
     useModelSelectorContext();
   const { modelSpec: selectedSpec } = selectedValues;
-  const searchValue = endpointSearchValues[endpoint.value] || '';
+  const searchValue = endpointSearchValues[getEndpointMenuKey(endpoint)] || '';
 
   const endpointSpecs = useMemo(() => {
-    if (!modelSpecs || !modelSpecs.length) {
+    if (!modelSpecs || !modelSpecs.length || endpoint.agentCategory) {
       return [];
     }
     return modelSpecs.filter((spec: TModelSpec) => spec.group === endpoint.value);
-  }, [modelSpecs, endpoint.value]);
+  }, [modelSpecs, endpoint.value, endpoint.agentCategory]);
 
   if (isAssistantsEndpoint(endpoint.value) && endpoint.models === undefined) {
     return (
@@ -255,15 +260,16 @@ export function EndpointItem({ endpoint, endpointIndex }: EndpointItemProps) {
   const localize = useLocalize();
   const {
     selectedValues,
+    mappedEndpoints,
     handleOpenKeyDialog,
     handleSelectEndpoint,
     endpointSearchValues,
     setEndpointSearchValue,
     endpointRequiresUserKey,
   } = useModelSelectorContext();
-  const { endpoint: selectedEndpoint, modelSpec: selectedSpec } = selectedValues;
 
-  const searchValue = endpointSearchValues[endpoint.value] || '';
+  const menuKey = getEndpointMenuKey(endpoint);
+  const searchValue = endpointSearchValues[menuKey] || '';
   const isUserProvided = useMemo(
     () => endpointRequiresUserKey(endpoint.value),
     [endpointRequiresUserKey, endpoint.value],
@@ -283,7 +289,7 @@ export function EndpointItem({ endpoint, endpointIndex }: EndpointItemProps) {
     </div>
   );
 
-  const isEndpointSelected = !selectedSpec && selectedEndpoint === endpoint.value;
+  const isEndpointSelected = isEndpointMenuSelected(endpoint, selectedValues, mappedEndpoints);
 
   if (!shouldRenderEndpointOption(endpoint)) {
     return null;
@@ -296,10 +302,10 @@ export function EndpointItem({ endpoint, endpointIndex }: EndpointItemProps) {
         : localize('com_endpoint_search_endpoint_models', { 0: endpoint.label });
     return (
       <Menu
-        id={`endpoint-${endpoint.value}-menu`}
-        key={`endpoint-${endpoint.value}-item`}
+        id={`endpoint-${menuKey}-menu`}
+        key={`endpoint-${menuKey}-item`}
         searchValue={searchValue}
-        onSearch={(value) => setEndpointSearchValue(endpoint.value, value)}
+        onSearch={(value) => setEndpointSearchValue(menuKey, value)}
         combobox={<input placeholder=" " />}
         comboboxLabel={placeholder}
         onClick={() => handleSelectEndpoint(endpoint)}
@@ -326,8 +332,8 @@ export function EndpointItem({ endpoint, endpointIndex }: EndpointItemProps) {
   } else {
     return (
       <MenuItem
-        id={`endpoint-${endpoint.value}-menu`}
-        key={`endpoint-${endpoint.value}-item`}
+        id={`endpoint-${menuKey}-menu`}
+        key={`endpoint-${menuKey}-item`}
         onClick={() => handleSelectEndpoint(endpoint)}
         aria-selected={isEndpointSelected || undefined}
         className="group flex w-full cursor-pointer items-center justify-between gap-1.5 py-2 text-sm"
@@ -365,7 +371,7 @@ export function renderEndpoints(mappedEndpoints: Endpoint[]) {
     <EndpointItem
       endpoint={endpoint}
       endpointIndex={index}
-      key={`endpoint-${endpoint.value}-${index}`}
+      key={`endpoint-${getEndpointMenuKey(endpoint)}-${index}`}
     />
   ));
 }

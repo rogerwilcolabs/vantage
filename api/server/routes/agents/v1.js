@@ -1,9 +1,22 @@
 const express = require('express');
-const { generateCheckAccess } = require('@librechat/api');
+const { generateCheckAccess, createAgentCategoryHandlers } = require('@librechat/api');
 const { PermissionTypes, Permissions, PermissionBits } = require('librechat-data-provider');
 const { configMiddleware, canAccessAgentResource } = require('~/server/middleware');
+const checkAdmin = require('~/server/middleware/roles/admin');
 const v1 = require('~/server/controllers/agents/v1');
-const { getRoleByName } = require('~/models');
+const {
+  getRoleByName,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  getCategoriesWithCounts,
+  getDefaultCategoryValues,
+  getCategoryAccess,
+  setCategoryAccess,
+  makeCategoryAgentsPrivate,
+  findUsers,
+  findGroupById,
+} = require('~/models');
 const actions = require('./actions');
 const tools = require('./tools');
 
@@ -18,6 +31,19 @@ const checkAgentAccess = generateCheckAccess({
 const checkAgentCreate = generateCheckAccess({
   permissionType: PermissionTypes.AGENTS,
   permissions: [Permissions.USE, Permissions.CREATE],
+  getRoleByName,
+});
+const categories = createAgentCategoryHandlers({
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  getCategoriesWithCounts,
+  getDefaultCategoryValues,
+  getCategoryAccess,
+  setCategoryAccess,
+  makeCategoryAgentsPrivate,
+  findUsers,
+  findGroupById,
   getRoleByName,
 });
 
@@ -38,6 +64,20 @@ router.use('/tools', configMiddleware, tools);
  * @route GET /agents/categories
  */
 router.get('/categories', v1.getAgentCategories);
+
+/**
+ * Admin-only management of agent categories.
+ * Registered before the `/:id` routes so these paths aren't read as agent ids.
+ */
+router.get('/categories/manage', checkAdmin, categories.list);
+router.post('/categories', checkAdmin, categories.create);
+router.put('/categories/order', checkAdmin, categories.reorder);
+router.patch('/categories/:value', checkAdmin, categories.update);
+router.delete('/categories/:value', checkAdmin, categories.remove);
+router.get('/categories/:value/access', checkAdmin, categories.getAccess);
+router.put('/categories/:value/access', checkAdmin, categories.setAccess);
+router.post('/categories/:value/access/private', checkAdmin, categories.makePrivate);
+
 /**
  * Creates an agent.
  * @route POST /agents

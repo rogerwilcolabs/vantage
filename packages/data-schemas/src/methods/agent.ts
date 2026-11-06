@@ -13,6 +13,7 @@ import type { AgentToolResources } from 'librechat-data-provider';
 import type { IAgent, IAclEntry, ActionQuery } from '~/types';
 import { withCodeEnvironmentReference } from './codeEnvironment';
 import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
+import { syncAgentCategoryAccess } from './agentCategory';
 import { filterExistingSkillIds } from './skill';
 import logger from '~/config/winston';
 
@@ -698,6 +699,15 @@ export function createAgentMethods(
     }
   }
 
+  /** The agent is already saved, so a failed sync is logged rather than failing the save. */
+  async function refreshCategoryAccess(agent: Pick<IAgent, '_id' | 'category' | 'author'>) {
+    try {
+      await syncAgentCategoryAccess(mongoose, agent);
+    } catch (error) {
+      logger.error(`[agent] Failed to sync category access for agent ${String(agent._id)}`, error);
+    }
+  }
+
   /**
    * Create an agent with the provided data.
    */
@@ -736,15 +746,17 @@ export function createAgentMethods(
         extractMCPServerNames(agentData.tools as string[] | undefined),
     };
 
-    return await withCodeEnvironmentReference(
+    const createdAgent = await withCodeEnvironmentReference(
       mongoose,
       typeof agentData.code_environment_id === 'string' ? agentData.code_environment_id : undefined,
       async () => (await Agent.create(initialAgentData)).toObject() as IAgent,
       undefined,
-      async (createdAgent) => {
-        await Agent.deleteOne({ _id: createdAgent._id });
+      async (created) => {
+        await Agent.deleteOne({ _id: created._id });
       },
     );
+    await refreshCategoryAccess(createdAgent);
+    return createdAgent;
   }
 
   /**
@@ -1116,6 +1128,10 @@ export function createAgentMethods(
      *  being the same question once a suppressed update started landing. */
     if (updatedAgent && suppressedVersionEntry) {
       (updatedAgent as IAgent & { version?: number }).version = updatedAgent.versions?.length ?? 0;
+    }
+
+    if (updatedAgent && updatedAgent.category !== currentAgent?.category) {
+      await refreshCategoryAccess(updatedAgent);
     }
 
     return updatedAgent;
@@ -1728,6 +1744,9 @@ export function createAgentMethods(
     );
     if (!revertedAgent) {
       throw new Error('Agent not found');
+    }
+    if (revertedAgent.category !== agent.category) {
+      await refreshCategoryAccess(revertedAgent);
     }
     return revertedAgent;
   }

@@ -9,7 +9,7 @@ function generateResourceId(text: string): string {
   return crypto.createHash('sha256').update(text).digest('hex').substring(0, 10);
 }
 
-function getMCPImageDataMaxBytes(): number {
+export function getMCPImageDataMaxBytes(): number {
   const raw = process.env.MCP_IMAGE_DATA_MAX_BYTES;
   if (!raw) {
     return DEFAULT_MCP_IMAGE_DATA_MAX_BYTES;
@@ -56,6 +56,7 @@ function assertImageDataWithinLimit(item: t.ImageContent): void {
 
 const RECOGNIZED_PROVIDERS = new Set([
   'google',
+  'vertexai',
   'anthropic',
   'openai',
   'azureopenai',

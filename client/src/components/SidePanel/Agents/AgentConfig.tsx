@@ -12,6 +12,7 @@ import { validateEmail, cn } from '~/utils';
 import Instructions from './Instructions';
 import FileContext from './FileContext';
 import AgentAvatar from './AgentAvatar';
+import Categories from './Categories';
 import { Panel } from '~/common';
 
 const fieldClass = 'h-9';
@@ -132,12 +133,15 @@ export default function AgentConfig() {
           </button>
         </div>
         <div className="flex flex-col">
-          <Label
-            className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-text-secondary"
-            htmlFor="category-selector"
-          >
-            {localize('com_ui_category')} <span className="text-text-destructive">*</span>
-          </Label>
+          <div className="mb-1 flex items-center justify-between gap-1">
+            <Label
+              className="block text-[11px] font-medium uppercase tracking-wide text-text-secondary"
+              htmlFor="category-selector"
+            >
+              {localize('com_ui_category')} <span className="text-text-destructive">*</span>
+            </Label>
+            <Categories />
+          </div>
           <AgentCategorySelector className="w-full rounded-lg" />
         </div>
       </div>
