@@ -199,6 +199,63 @@ export const useGetAgentCategoriesQuery = (
 };
 
 /**
+ * Admin only: who a category gives access to
+ */
+export const useGetAgentCategoryAccessQuery = (
+  value: string,
+): QueryObserverResult<t.TAgentCategoryAccess> => {
+  return useQuery<t.TAgentCategoryAccess>(
+    [QueryKeys.agentCategoryAccess, value],
+    () => dataService.getAgentCategoryAccess(value),
+    { refetchOnWindowFocus: false, refetchOnReconnect: false },
+  );
+};
+
+/**
+ * Admin only: the groups that can be given access to categories
+ */
+export const useGetAdminGroupsQuery = (): QueryObserverResult<{
+  groups: t.TAdminGroup[];
+  total: number;
+}> => {
+  return useQuery<{ groups: t.TAdminGroup[]; total: number }>(
+    [QueryKeys.adminGroups],
+    () => dataService.getAdminGroups(),
+    { refetchOnWindowFocus: false, refetchOnReconnect: false },
+  );
+};
+
+/**
+ * Admin only: the people in one group
+ */
+export const useGetAdminGroupMembersQuery = (
+  id: string,
+): QueryObserverResult<{ members: t.TAdminGroupMember[]; total: number }> => {
+  return useQuery<{ members: t.TAdminGroupMember[]; total: number }>(
+    [QueryKeys.adminGroupMembers, id],
+    () => dataService.getAdminGroupMembers(id),
+    { refetchOnWindowFocus: false, refetchOnReconnect: false },
+  );
+};
+
+/**
+ * Admin only: every agent category, hidden ones included
+ */
+export const useGetManagedAgentCategoriesQuery = (
+  config?: UseQueryOptions<t.TManagedAgentCategory[]>,
+): QueryObserverResult<t.TManagedAgentCategory[]> => {
+  return useQuery<t.TManagedAgentCategory[]>(
+    [QueryKeys.managedAgentCategories],
+    () => dataService.getManagedAgentCategories(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      ...config,
+    },
+  );
+};
+
+/**
  * Hook for infinite loading of marketplace agents with cursor-based pagination
  */
 export const useMarketplaceAgentsInfiniteQuery = (

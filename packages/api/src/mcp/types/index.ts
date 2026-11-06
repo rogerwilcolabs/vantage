@@ -102,6 +102,7 @@ export type MCPToolCallResponse =
 
 export type Provider =
   | 'google'
+  | 'vertexai'
   | 'anthropic'
   | 'openai'
   | 'azureopenai'

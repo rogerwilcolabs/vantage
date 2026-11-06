@@ -6,10 +6,10 @@ import type { TModelSpec } from 'librechat-data-provider';
 import type { Endpoint, LocalizeFunction } from '~/common';
 import { EndpointModelItem, VIRTUALIZE_THRESHOLD } from './EndpointModelItem';
 import MarketplaceItem, { marketplaceSearchMatches } from './Marketplace';
+import { getEndpointMenuKey, shouldRenderEndpointOption } from '../utils';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import VirtualizedModelList from './VirtualizedModelList';
-import { shouldRenderEndpointOption } from '../utils';
 import { cn, getSpecAgentAvatarURL } from '~/utils';
 import SpecDescription from './SpecDescription';
 import { useFavorites } from '~/hooks';
@@ -268,7 +268,7 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
         if (result.kind === 'models') {
           const { endpoint, filteredModels, showMarketplace } = result;
           return (
-            <Fragment key={`endpoint-${endpoint.value}-search`}>
+            <Fragment key={`endpoint-${getEndpointMenuKey(endpoint)}-search`}>
               <div className="flex items-center gap-2 px-3 py-1 text-sm font-medium">
                 {endpoint.icon && (
                   <div className="flex items-center justify-center overflow-hidden rounded-full p-1">

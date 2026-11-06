@@ -2,6 +2,7 @@ import React from 'react';
 import { Bot } from 'lucide-react';
 import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type {
+  Agent,
   TModelSpec,
   TAgentsMap,
   TAssistantsMap,
@@ -87,6 +88,95 @@ export function shouldRenderEndpointOption(endpoint: {
   hasModels?: boolean;
 }): boolean {
   return !isAgentsEndpoint(endpoint.value) || endpoint.hasModels === true;
+}
+
+/** Agents in the default category stay under My Agents instead of getting a group. */
+export const DEFAULT_AGENT_CATEGORY = 'general';
+
+/** Unique key for an endpoint's menu: agent category groups share the agents endpoint value. */
+export function getEndpointMenuKey(endpoint: Pick<Endpoint, 'value' | 'agentCategory'>): string {
+  return endpoint.agentCategory ? `${endpoint.value}-${endpoint.agentCategory}` : endpoint.value;
+}
+
+/**
+ * Splits the agents endpoint into one menu per agent category, placed right after My Agents
+ * in category order. Agents in General, or in a category that no longer exists, stay in My
+ * Agents. Every group keeps the full name and icon maps, so the header can still resolve the
+ * selected agent from the first agents endpoint.
+ */
+export function groupAgentsByCategory(
+  endpoints: Endpoint[],
+  agents: Array<Pick<Agent, 'id' | 'category'>> | null | undefined,
+  categories: Array<{ value: string; label: string }>,
+): Endpoint[] {
+  const index = endpoints.findIndex((ep) => isAgentsEndpoint(ep.value) && !ep.agentCategory);
+  if (index === -1 || !agents?.length) {
+    return endpoints;
+  }
+
+  const agentsEndpoint = endpoints[index];
+  const models = agentsEndpoint.models ?? [];
+  const groups = categories
+    .filter((category) => category.value !== DEFAULT_AGENT_CATEGORY)
+    .map((category) => {
+      const ids = new Set(
+        agents.filter((agent) => agent.category === category.value).map((agent) => agent.id),
+      );
+      return { category, models: models.filter((model) => ids.has(model.name)) };
+    })
+    .filter((group) => group.models.length > 0);
+
+  if (!groups.length) {
+    return endpoints;
+  }
+
+  const grouped = new Set(groups.flatMap((group) => group.models.map((model) => model.name)));
+  const myAgents: Endpoint = {
+    ...agentsEndpoint,
+    models: models.filter((model) => !grouped.has(model.name)),
+  };
+  const groupEndpoints = groups.map<Endpoint>(({ category, models }) => ({
+    ...agentsEndpoint,
+    label: category.label,
+    models,
+    agentCategory: category.value,
+    showMarketplace: false,
+    searchAliases: undefined,
+  }));
+  const keepMyAgents = (myAgents.models?.length ?? 0) > 0 || myAgents.showMarketplace === true;
+
+  return [
+    ...endpoints.slice(0, index),
+    ...(keepMyAgents ? [myAgents] : []),
+    ...groupEndpoints,
+    ...endpoints.slice(index + 1),
+  ];
+}
+
+/**
+ * Whether this menu holds the current selection. Agent category groups share the agents
+ * endpoint value, so the group that lists the selected agent shows the check, and My Agents
+ * shows it for any other agent.
+ */
+export function isEndpointMenuSelected(
+  endpoint: Endpoint,
+  selectedValues: SelectedValues,
+  mappedEndpoints: Endpoint[],
+): boolean {
+  const { endpoint: selectedEndpoint, model, modelSpec } = selectedValues;
+  if (modelSpec || selectedEndpoint !== endpoint.value) {
+    return false;
+  }
+  if (!isAgentsEndpoint(endpoint.value)) {
+    return true;
+  }
+  const owner = mappedEndpoints.find(
+    (ep) =>
+      ep.value === endpoint.value &&
+      ep.agentCategory != null &&
+      ep.models?.some((item) => item.name === model),
+  );
+  return owner?.agentCategory === endpoint.agentCategory;
 }
 
 export function filterModels(

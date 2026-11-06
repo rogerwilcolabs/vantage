@@ -8,18 +8,20 @@ import {
 } from 'librechat-data-provider';
 import type * as t from 'librechat-data-provider';
 import type { Endpoint, SelectedValues } from '~/common';
+import type { TranslationKeys } from '~/hooks';
 import {
   useAgentDefaultPermissionLevel,
+  useAgentCategories,
   useSelectorEffects,
   useKeyDialog,
   useEndpoints,
   useLocalize,
 } from '~/hooks';
 import { useAgentsMapContext, useAssistantsMapContext, useLiveAnnouncer } from '~/Providers';
+import { DEFAULT_AGENT_CATEGORY, filterItems, groupAgentsByCategory } from './utils';
 import { useGetEndpointsQuery, useListAgentsQuery } from '~/data-provider';
 import { useModelSelectorChatContext } from './ModelSelectorChatContext';
 import useSelectMention from '~/hooks/Input/useSelectMention';
-import { filterItems } from './utils';
 
 type ModelSelectorContextType = {
   // State
@@ -102,7 +104,12 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       if (!wantsEditableOnly) {
         return list;
       }
-      return list?.filter((agent) => agent.isEditable !== false);
+      /** Category groups list everything the user may use, so view-only access shows up too. */
+      return list?.filter(
+        (agent) =>
+          agent.isEditable !== false ||
+          (agent.category != null && agent.category !== DEFAULT_AGENT_CATEGORY),
+      );
     },
     [wantsEditableOnly],
   );
@@ -111,12 +118,24 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     { select: selectAgents },
   );
 
-  const { mappedEndpoints, endpointRequiresUserKey } = useEndpoints({
+  const { mappedEndpoints: endpoints, endpointRequiresUserKey } = useEndpoints({
     agents,
     assistantsMap,
     startupConfig,
     endpointsConfig,
   });
+
+  /** Every agent category other than General gets its own menu next to My Agents. */
+  const { categories } = useAgentCategories();
+  const mappedEndpoints = useMemo(() => {
+    const groups = categories.map((category) => ({
+      value: category.value,
+      label: category.label.startsWith('com_')
+        ? localize(category.label as TranslationKeys)
+        : category.label,
+    }));
+    return groupAgentsByCategory(endpoints, agents, groups);
+  }, [endpoints, agents, categories, localize]);
 
   const getModelDisplayName = useCallback(
     (endpoint: Endpoint, model: string): string => {

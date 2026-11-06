@@ -43,6 +43,7 @@ import { MCPConnectionFactory } from './MCPConnectionFactory';
 import { processMCPEnv, isPluginSourced } from '~/utils/env';
 import { OAuthLifecycleRelay } from './oauth/pending';
 import { preProcessGraphTokens } from '~/utils/graph';
+import { attachSlideThumbnail } from './thumbnails';
 import { isOwnedAbortError } from '~/utils/errors';
 import { withMCPRequestSignal } from './signal';
 import { formatToolContent } from './parsers';
@@ -1652,7 +1653,12 @@ Please follow these instructions when using tools from the respective MCP server
           await this.updateUserLastActivity(userId);
         }
         this.checkIdleConnections();
-        return formatToolContent(result as t.MCPToolCallResponse, provider);
+        const withThumbnail = await attachSlideThumbnail({
+          serverName,
+          toolName,
+          result: result as t.MCPToolCallResponse,
+        });
+        return formatToolContent(withThumbnail, provider);
       } catch (error) {
         if (error instanceof OAuthRecoveryTakeoverRequired) {
           recoveryTakeoverConsumed = true;

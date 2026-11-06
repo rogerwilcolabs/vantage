@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { dataService, MutationKeys, PermissionBits, QueryKeys } from 'librechat-data-provider';
-import type { QueryClient, UseMutationResult } from '@tanstack/react-query';
+import type { QueryClient, UseMutationOptions, UseMutationResult } from '@tanstack/react-query';
 import type * as t from 'librechat-data-provider';
 
 /**
@@ -438,6 +438,176 @@ export const useDeleteAgentAction = (
     },
   });
 };
+
+/**
+ * AGENT CATEGORIES
+ */
+type AgentCategoryMutationOptions<TData, TVariables> = Pick<
+  UseMutationOptions<TData, t.AgentCategoryError, TVariables>,
+  'onSuccess' | 'onError'
+>;
+
+const useAgentCategoryMutation = <TData, TVariables>(
+  key: MutationKeys,
+  mutationFn: (variables: TVariables) => Promise<TData>,
+  options?: AgentCategoryMutationOptions<TData, TVariables>,
+): UseMutationResult<TData, t.AgentCategoryError, TVariables> => {
+  const queryClient = useQueryClient();
+  return useMutation<TData, t.AgentCategoryError, TVariables>([key], mutationFn, {
+    ...options,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.agentCategories]);
+      queryClient.invalidateQueries([QueryKeys.managedAgentCategories]);
+      return options?.onSuccess?.(data, variables, context);
+    },
+  });
+};
+
+export const useCreateAgentCategoryMutation = (
+  options?: AgentCategoryMutationOptions<t.TManagedAgentCategory, string>,
+) =>
+  useAgentCategoryMutation(
+    MutationKeys.createAgentCategory,
+    (label: string) => dataService.createAgentCategory(label),
+    options,
+  );
+
+export const useUpdateAgentCategoryMutation = (
+  options?: AgentCategoryMutationOptions<
+    t.TManagedAgentCategory,
+    { value: string; data: t.TAgentCategoryUpdate }
+  >,
+) =>
+  useAgentCategoryMutation(
+    MutationKeys.updateAgentCategory,
+    ({ value, data }: { value: string; data: t.TAgentCategoryUpdate }) =>
+      dataService.updateAgentCategory(value, data),
+    options,
+  );
+
+export const useReorderAgentCategoriesMutation = (
+  options?: AgentCategoryMutationOptions<t.TManagedAgentCategory[], string[]>,
+) =>
+  useAgentCategoryMutation(
+    MutationKeys.reorderAgentCategories,
+    (values: string[]) => dataService.reorderAgentCategories(values),
+    options,
+  );
+
+export const useDeleteAgentCategoryMutation = (
+  options?: AgentCategoryMutationOptions<void, string>,
+) =>
+  useAgentCategoryMutation(
+    MutationKeys.deleteAgentCategory,
+    (value: string) => dataService.deleteAgentCategory(value),
+    options,
+  );
+
+export const useSetAgentCategoryAccessMutation = (
+  options?: AgentCategoryMutationOptions<
+    t.TAgentCategoryAccess,
+    { value: string; principals: Array<{ type: string; id: string }> }
+  >,
+) => {
+  const queryClient = useQueryClient();
+  return useAgentCategoryMutation(
+    MutationKeys.setAgentCategoryAccess,
+    ({ value, principals }: { value: string; principals: Array<{ type: string; id: string }> }) =>
+      dataService.setAgentCategoryAccess(value, principals),
+    {
+      ...options,
+      onSuccess: (data, variables, context) => {
+        queryClient.setQueryData([QueryKeys.agentCategoryAccess, variables.value], data);
+        return options?.onSuccess?.(data, variables, context);
+      },
+    },
+  );
+};
+
+export const useMakeAgentCategoryPrivateMutation = (
+  options?: AgentCategoryMutationOptions<t.TAgentCategoryAccess, string>,
+) => {
+  const queryClient = useQueryClient();
+  return useAgentCategoryMutation(
+    MutationKeys.makeAgentCategoryPrivate,
+    (value: string) => dataService.makeAgentCategoryPrivate(value),
+    {
+      ...options,
+      onSuccess: (data, value, context) => {
+        queryClient.setQueryData([QueryKeys.agentCategoryAccess, value], data);
+        return options?.onSuccess?.(data, value, context);
+      },
+    },
+  );
+};
+
+/**
+ * ADMIN GROUPS
+ */
+type AdminGroupMutationOptions<TData, TVariables> = Pick<
+  UseMutationOptions<TData, Error, TVariables>,
+  'onSuccess' | 'onError'
+>;
+
+const useAdminGroupMutation = <TData, TVariables>(
+  key: MutationKeys,
+  mutationFn: (variables: TVariables) => Promise<TData>,
+  options?: AdminGroupMutationOptions<TData, TVariables>,
+): UseMutationResult<TData, Error, TVariables> => {
+  const queryClient = useQueryClient();
+  return useMutation<TData, Error, TVariables>([key], mutationFn, {
+    ...options,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.adminGroups]);
+      queryClient.invalidateQueries([QueryKeys.adminGroupMembers]);
+      /** A deleted group drops out of every category's access list. */
+      queryClient.invalidateQueries([QueryKeys.agentCategoryAccess]);
+      queryClient.invalidateQueries([QueryKeys.managedAgentCategories]);
+      return options?.onSuccess?.(data, variables, context);
+    },
+  });
+};
+
+export const useCreateAdminGroupMutation = (
+  options?: AdminGroupMutationOptions<{ group: t.TAdminGroup }, string>,
+) =>
+  useAdminGroupMutation(
+    MutationKeys.createAdminGroup,
+    (name: string) => dataService.createAdminGroup(name),
+    options,
+  );
+
+export const useDeleteAdminGroupMutation = (
+  options?: AdminGroupMutationOptions<{ success: boolean }, string>,
+) =>
+  useAdminGroupMutation(
+    MutationKeys.deleteAdminGroup,
+    (id: string) => dataService.deleteAdminGroup(id),
+    options,
+  );
+
+export const useAddAdminGroupMemberMutation = (
+  options?: AdminGroupMutationOptions<
+    { group: t.TAdminGroup },
+    { groupId: string; userId: string }
+  >,
+) =>
+  useAdminGroupMutation(
+    MutationKeys.addAdminGroupMember,
+    ({ groupId, userId }: { groupId: string; userId: string }) =>
+      dataService.addAdminGroupMember(groupId, userId),
+    options,
+  );
+
+export const useRemoveAdminGroupMemberMutation = (
+  options?: AdminGroupMutationOptions<{ success: boolean }, { groupId: string; userId: string }>,
+) =>
+  useAdminGroupMutation(
+    MutationKeys.removeAdminGroupMember,
+    ({ groupId, userId }: { groupId: string; userId: string }) =>
+      dataService.removeAdminGroupMember(groupId, userId),
+    options,
+  );
 
 /**
  * Hook for reverting an agent to a previous version

@@ -310,6 +310,8 @@ export const assistants = ({
   return url;
 };
 
+export const adminGroups = (path = '') => `${BASE_URL}/api/admin/groups${path}`;
+
 export const agents = ({ path = '', options }: { path?: string; options?: object }) => {
   let url = `${BASE_URL}/api/agents`;
 

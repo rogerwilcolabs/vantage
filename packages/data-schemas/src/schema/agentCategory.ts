@@ -34,6 +34,16 @@ const agentCategorySchema: Schema<IAgentCategory> = new Schema<IAgentCategory>(
       type: Boolean,
       default: false,
     },
+    access: {
+      type: [
+        {
+          _id: false,
+          principalType: { type: String, enum: ['user', 'group', 'role'], required: true },
+          principalId: { type: String, required: true },
+        },
+      ],
+      default: undefined,
+    },
     tenantId: {
       type: String,
       index: true,

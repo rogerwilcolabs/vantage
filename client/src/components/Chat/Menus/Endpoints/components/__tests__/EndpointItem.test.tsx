@@ -18,6 +18,7 @@ jest.mock('~/components/Chat/Menus/Endpoints/ModelSelectorContext', () => ({
     agentsMap: undefined,
     assistantsMap: undefined,
     modelSpecs: [],
+    mappedEndpoints: [],
     selectedValues: mockSelectedValues,
     endpointSearchValues: {},
     handleOpenKeyDialog: mockHandleOpenKeyDialog,
