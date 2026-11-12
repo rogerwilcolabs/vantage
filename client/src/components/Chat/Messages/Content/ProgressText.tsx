@@ -1,19 +1,24 @@
 import { useCallback, useRef } from 'react';
+import { useStore } from 'jotai';
 import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import * as Popover from '@radix-ui/react-popover';
+import { phaseReceipts } from '@librechat/chat/react';
 import { Button, disclosureChevronVariants } from '@librechat/client';
 import { isReportableRunStepDuration } from 'librechat-data-provider';
-import type { ToolCallPhase } from '~/utils/toolCallPhase';
+import {
+  ElapsedTimer,
+  CancelledIcon,
+  ROW_GLYPH_SLOT,
+  useToolPreparation,
+  useFailedReveal,
+} from '@librechat/chat/components';
+import type { ToolCallPhase } from '@librechat/chat';
 import { cn, getRunStepDurationLabels } from '~/utils';
-import CancelledIcon from './CancelledIcon';
-import { useFailedReveal } from './reveal';
-import { ElapsedTimer } from '../Elapsed';
-import { ROW_GLYPH_SLOT } from './rows';
 import { useLocalize } from '~/hooks';
 
 const wrapperClass =
-  'progress-text-wrapper text-token-text-secondary relative -mt-[0.75px] h-5 w-full leading-5';
+  'progress-text-wrapper text-text-secondary relative -mt-[0.046875rem] h-5 w-full leading-5';
 
 /** `right-0` and `max-w-full` cap the absolutely-positioned line at the message
  *  column; the label span truncates itself, so overflow stays visible for the
@@ -21,42 +26,28 @@ const wrapperClass =
 const contentClass =
   'progress-text-content absolute left-0 right-0 top-0 max-w-full overflow-visible whitespace-nowrap';
 
-/** A failed row is marked at its left edge, in the rail's column when the row
- *  sits under a header and in the gutter when it stands alone, so a failure
- *  is findable by shape before its text is read. A pseudo-element rather than
- *  a border: the row's content is absolutely positioned against the padding
- *  box, so a border would push it and change the row's geometry. */
-const failedStripeClass =
-  "before:absolute before:-left-3 before:top-0 before:h-full before:w-0.5 before:rounded-full before:bg-status-error before:content-['']";
-
 const Wrapper = ({
   popover,
-  failed,
   rootRef,
   children,
 }: {
   popover: boolean;
-  failed: boolean;
   rootRef: React.RefObject<HTMLDivElement>;
   children: React.ReactNode;
 }) => {
   if (popover) {
     return (
-      <div className={cn(wrapperClass, failed && failedStripeClass)} ref={rootRef}>
+      <div className={wrapperClass} ref={rootRef}>
         <Popover.Trigger asChild>
-          <div className={contentClass} style={{ opacity: 1, transform: 'none' }}>
-            {children}
-          </div>
+          <div className={contentClass}>{children}</div>
         </Popover.Trigger>
       </div>
     );
   }
 
   return (
-    <div className={cn(wrapperClass, failed && failedStripeClass)} ref={rootRef}>
-      <div className={contentClass} style={{ opacity: 1, transform: 'none' }}>
-        {children}
-      </div>
+    <div className={wrapperClass} ref={rootRef}>
+      <div className={contentClass}>{children}</div>
     </div>
   );
 };
@@ -73,13 +64,16 @@ export default function ProgressText({
   toolPreparationDurationMs,
   toolExecutionDurationMs,
   phaseStartAt,
+  phaseStepId,
   hasInput = true,
   popover = false,
   isExpanded = false,
+  verdict,
+  timer,
 }: {
   /**
    * The card's settled state, resolved once by the caller via
-   * `resolveToolCallPhase`. Replaces the former `error` + `errorSuffix`
+   * `resolveToolCallPhase`. Replaces the former `error`+ `errorSuffix`
    * pair, which encoded three terminal states in two booleans — `error`
    * meant cancelled, a present `errorSuffix` meant failed, and every
    * consumer had to reconstruct the distinction. That shape is what let a
@@ -98,23 +92,35 @@ export default function ProgressText({
   toolPreparationDurationMs?: number;
   toolExecutionDurationMs?: number;
   phaseStartAt?: number;
+  phaseStepId?: string;
   hasInput?: boolean;
   popover?: boolean;
   isExpanded?: boolean;
+  /** Why a failed card failed ("exit code 2"), shown in place of the generic failure
+   *  suffix. Plain text inside the button, so it is part of its name. */
+  verdict?: string;
+  timer?: React.ReactNode;
 }) {
   const localize = useLocalize();
   /** For locale-aware decimal formatting of the sub-10s duration value. */
   const { i18n } = useTranslation();
+  const preparationText = useToolPreparation();
   const isRunning = phase === 'running';
+  const receiptStore = useStore();
+  /** Stream receipts are recorded before the matching phase reaches the message renderer. */
+  const receivedAt =
+    phaseStepId != null && phaseStartAt != null
+      ? receiptStore.get(phaseReceipts).get(phaseStepId)?.get(phaseStartAt)
+      : undefined;
   /** A server-authored phase stamp is an identity, not a browser clock origin.
    * On reconnect we can only time from local receipt, never infer cross-host skew. */
   const phaseTimer = useRef<{ stamp?: number; receivedAt: number } | null>(null);
   if (!isRunning || phaseStartAt == null) {
     phaseTimer.current = null;
   } else if (phaseTimer.current?.stamp !== phaseStartAt) {
-    phaseTimer.current = { stamp: phaseStartAt, receivedAt: Date.now() };
+    phaseTimer.current = { stamp: phaseStartAt, receivedAt: receivedAt ?? Date.now() };
   }
-  const localPhaseStart = phaseTimer.current?.receivedAt;
+  const localPhaseStart = receivedAt ?? phaseTimer.current?.receivedAt;
   const rootRef = useRef<HTMLDivElement>(null);
   /** A header above asked for its failures. This control is the disclosure
    *  every card renders, so answering here reaches a failed bash, code,
@@ -145,7 +151,7 @@ export default function ProgressText({
   /** Every branch below reads `phase`, so the label, the icon, the shimmer,
    *  the failure suffix and the duration cannot disagree about what state
    *  the card is in. */
-  const text = isRunning ? (authText ?? inProgressText) : finishedText;
+  const text = isRunning ? (authText ?? preparationText ?? inProgressText) : finishedText;
   const icon = phase === 'cancelled' ? <CancelledIcon /> : (iconProp ?? null);
   const showShimmer = isRunning;
   const errorSuffix = phase === 'failed' ? localize('com_ui_tool_failed') : undefined;
@@ -161,30 +167,34 @@ export default function ProgressText({
     toolExecutionDurationMs != null &&
     Number.isFinite(toolExecutionDurationMs) &&
     toolExecutionDurationMs >= 50;
+  /** Pinned beside the chevron: "2.4s (prepared in 0.3s)". */
   const durationParts =
     phase !== 'completed'
       ? []
       : [
-          ...(isReportableRunStepDuration(toolPreparationDurationMs)
-            ? [
-                {
-                  label: localize('com_ui_tool_preparation_time'),
-                  duration: getRunStepDurationLabels(toolPreparationDurationMs, i18n.language),
-                },
-              ]
-            : []),
           ...(showToolCallTime
             ? [
                 {
                   label: localize('com_ui_tool_call_time'),
+                  phrase: undefined,
                   duration: getRunStepDurationLabels(toolExecutionDurationMs, i18n.language),
+                },
+              ]
+            : []),
+          ...(isReportableRunStepDuration(toolPreparationDurationMs)
+            ? [
+                {
+                  label: localize('com_ui_tool_preparation_time'),
+                  phrase: 'com_ui_duration_prepared_in' as const,
+                  duration: getRunStepDurationLabels(toolPreparationDurationMs, i18n.language),
                 },
               ]
             : []),
           ...(!measured && isReportableRunStepDuration(durationMs)
             ? [
                 {
-                  label: localize('com_ui_tool_total_time'),
+                  label: '',
+                  phrase: undefined,
                   duration: getRunStepDurationLabels(durationMs, i18n.language),
                 },
               ]
@@ -192,16 +202,11 @@ export default function ProgressText({
         ];
 
   return (
-    <Wrapper popover={popover} failed={phase === 'failed'} rootRef={rootRef}>
+    <Wrapper popover={popover} rootRef={rootRef}>
       <Button
         type="button"
-        variant="ghost"
-        className={cn(
-          'group/disclosure inline-flex h-auto w-full items-center justify-start gap-2 rounded-none p-0 hover:bg-transparent hover:text-inherit disabled:opacity-100',
-          hasInput
-            ? 'focus-visible:ring-border-heavy focus-visible:ring-offset-0'
-            : 'pointer-events-none',
-        )}
+        variant="disclosure"
+        className="group/disclosure"
         disabled={!hasInput}
         tabIndex={hasInput ? 0 : -1}
         onClick={hasInput ? onClick : undefined}
@@ -226,43 +231,55 @@ export default function ProgressText({
           <span
             className={cn(
               showShimmer ? 'shimmer' : '',
-              'min-w-0 max-w-full truncate font-medium',
+              'max-w-full min-w-0 truncate font-medium',
               subtitle && 'shrink-0',
             )}
           >
             {text}
           </span>
           {subtitle && (
-            <span className="min-w-0 shrink truncate font-normal text-text-secondary">
+            <span className="text-text-secondary min-w-0 shrink truncate font-normal">
               {subtitle}
             </span>
           )}
         </span>
+        {/* A reason ("timed out", "exit code 2") already says the call failed,
+            so it replaces the generic word instead of following it. */}
         {errorSuffix && (
-          <span className="shrink-0 font-normal text-status-error">· {errorSuffix}</span>
+          <span className="text-status-error shrink-0 font-normal">· {verdict || errorSuffix}</span>
         )}
-        {isRunning && phaseStartAt != null && localPhaseStart != null && (
-          <ElapsedTimer start={localPhaseStart} />
-        )}
-        {durationParts.map(({ label, duration }) => (
-          <span key={label} className="shrink-0 font-normal text-text-secondary">
-            <span aria-hidden="true">
-              · {label} {localize(duration.key, duration.values)}
+        {/* Pinned to the row's end so every row's time and chevron line up. */}
+        <span className="ms-auto flex shrink-0 items-center gap-2">
+          {timer}
+          {timer == null && isRunning && phaseStartAt != null && localPhaseStart != null && (
+            <ElapsedTimer start={localPhaseStart} />
+          )}
+          {durationParts.map(({ label, phrase, duration }) => (
+            <span
+              key={label}
+              className="text-text-secondary shrink-0 text-xs font-normal tabular-nums"
+            >
+              <span aria-hidden="true">
+                {phrase
+                  ? localize(phrase, { 0: localize(duration.key, duration.values) })
+                  : localize(duration.key, duration.values)}
+              </span>
+              <span className="sr-only">
+                {label && `${label} `}
+                {localize(duration.announcedKey, duration.announcedValues)}
+              </span>
             </span>
-            <span className="sr-only">
-              {label} {localize(duration.announcedKey, duration.announcedValues)}
-            </span>
-          </span>
-        ))}
-        {hasInput && (
-          <ChevronDown
-            className={cn(
-              disclosureChevronVariants({ expanded: isExpanded }),
-              'size-4 shrink-0 translate-y-[1px]',
-            )}
-            aria-hidden="true"
-          />
-        )}
+          ))}
+          {hasInput && (
+            <ChevronDown
+              className={cn(
+                disclosureChevronVariants({ expanded: isExpanded }),
+                'size-4 shrink-0 translate-y-[0.0625rem]',
+              )}
+              aria-hidden="true"
+            />
+          )}
+        </span>
       </Button>
     </Wrapper>
   );

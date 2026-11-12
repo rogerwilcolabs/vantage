@@ -19,6 +19,7 @@ const {
 } = require('~/models');
 const actions = require('./actions');
 const tools = require('./tools');
+const channels = require('./channels');
 
 const router = express.Router();
 const avatar = express.Router();
@@ -58,6 +59,7 @@ router.use('/actions', configMiddleware, actions);
  * @route GET /agents/tools
  */
 router.use('/tools', configMiddleware, tools);
+router.use('/:agentId/channels', channels);
 
 /**
  * Get all agent categories with counts
