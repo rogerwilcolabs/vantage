@@ -7,6 +7,7 @@ import type {
   TTraceRecordDetail,
 } from './types/traces';
 import type { TInsightsAccessResponse, TInsightsParams, TInsightsResponse } from './types/insights';
+import type { TEmbedAuthResponse, TEmbedAuthError } from './embed';
 import type { TFileConfig } from './file-config';
 import type * as tl from './types/tools';
 import type * as t from './types';
@@ -302,6 +303,20 @@ export const login = (payload: t.TLoginUser): Promise<t.TLoginResponse> => {
 
 export const logout = (): Promise<m.TLogoutResponse> => {
   return request.post(endpoints.logout());
+};
+
+/**
+ * Redeems the sign-in popup's handoff for an embed session. Resolves with `{ code }` while the
+ * popup has not finished signing in, so callers can keep polling.
+ */
+export const embedExchange = (
+  codeVerifier: string,
+): Promise<TEmbedAuthResponse | TEmbedAuthError> => {
+  return request.post(endpoints.embedExchange(), { code_verifier: codeVerifier });
+};
+
+export const embedLogout = (): Promise<void> => {
+  return request.post(endpoints.embedLogout());
 };
 
 export const register = (payload: t.TRegisterUser) => {

@@ -198,10 +198,14 @@ const setRequestAuthorizationHeader = (config: AxiosRequestConfig, token: string
   config.headers = headers;
 };
 
+const isRefreshEndpoint = (url?: string) =>
+  url?.includes('/api/auth/refresh') === true || url?.includes('/api/embed/auth/refresh') === true;
+
 const isAuthRecoveryEndpoint = (url?: string) =>
   url?.includes('/api/auth/2fa') === true ||
   url?.includes('/api/auth/logout') === true ||
-  url?.includes('/api/auth/refresh') === true;
+  url?.includes('/api/embed/auth/') === true ||
+  isRefreshEndpoint(url);
 
 const startAuthRecovery = (retryRefresh?: boolean) => {
   const state = getAuthRecoveryState();
@@ -358,7 +362,7 @@ if (typeof window !== 'undefined') {
         return Promise.reject(error);
       }
 
-      const isRefreshRequest = originalRequest.url?.includes('/api/auth/refresh') === true;
+      const isRefreshRequest = isRefreshEndpoint(originalRequest.url);
       if (isAuthRecoveryEndpoint(originalRequest.url) && !isRefreshRequest) {
         return Promise.reject(error);
       }

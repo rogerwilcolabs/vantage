@@ -22,8 +22,10 @@ import { QueuedTurnPortalProvider } from './Steering/QueuedTurnPortal';
 import ApprovalProvider from './Messages/Content/ApprovalContext';
 import ConversationStarters from './Input/ConversationStarters';
 import { pendingApprovalActionFamily } from './approval/state';
+import { useEmbedContext } from '~/components/Embed/context';
 import { useGetMessagesByConvoId } from '~/data-provider';
 import Footer, { useConfiguredFooter } from './Footer';
+import EmbedHeader from '~/components/Embed/Header';
 import { AskAnswerHostProvider } from './ask/state';
 import MessagesView from './Messages/MessagesView';
 import Presentation from './Presentation';
@@ -47,6 +49,7 @@ function LoadingSpinner() {
 function ChatView({ index = 0, project }: { index?: number; project?: TChatProject }) {
   const { conversationId } = useParams();
   const localize = useLocalize();
+  const embed = useEmbedContext();
   const rootSubmission = useRecoilValue(store.submissionByIndex(index));
   const isSubmitting = useRecoilValue(store.isSubmittingFamily(index));
   const saveDrafts = useRecoilValue(store.saveDrafts);
@@ -166,10 +169,14 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
                 <Presentation>
                   <TraceSurface conversationId={conversationId}>
                     <h1 className="sr-only">{pageHeading}</h1>
-                    <Header
-                      parentConversationId={parentConversationId}
-                      readOnly={isSubagentThreadReadOnly}
-                    />
+                    {embed ? (
+                      <EmbedHeader />
+                    ) : (
+                      <Header
+                        parentConversationId={parentConversationId}
+                        readOnly={isSubagentThreadReadOnly}
+                      />
+                    )}
                     <>
                       <div
                         className={cn(

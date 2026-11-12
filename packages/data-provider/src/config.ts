@@ -3122,6 +3122,44 @@ export type TOpenIdDiscoveryConfig = z.infer<typeof openIdDiscoverySchema>;
 /** Maximum CAS attempts per ACL document, including the initial attempt. */
 export const permissionWriteAttemptsSchema = z.number().int().min(1).max(100).default(3);
 
+/**
+ * Origins allowed to frame `/embed`: `'self'`, `https://` origins, or plain-HTTP loopback origins
+ * for local testing. No paths or wildcards.
+ */
+const embedFrameAncestorSchema = z
+  .string()
+  .refine(
+    (value) =>
+      value === "'self'" ||
+      /^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(value) ||
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(value),
+    {
+      message:
+        "Each embed frame ancestor must be 'self', an https:// origin, or an http://localhost origin, without a path.",
+    },
+  );
+
+/**
+ * Chat-only view that other sites (for example Looker Studio) can iframe. Off unless enabled,
+ * so deployments that never configure it keep `X-Frame-Options: sameorigin` on every page.
+ */
+export const embedConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  /** Sites allowed to frame the embed view, e.g. `https://lookerstudio.google.com`. */
+  frameAncestors: z.array(embedFrameAncestorSchema).max(20).default([]),
+  /** Milliseconds a sign-in popup's handoff stays redeemable by the frame that opened it. */
+  handoffTtlMs: z.number().int().min(30_000).max(600_000).default(300_000),
+  /** Milliseconds an embed session lasts before the viewer signs in again. Defaults to 7 days. */
+  sessionExpiryMs: z
+    .number()
+    .int()
+    .min(5 * 60_000)
+    .max(30 * 24 * 60 * 60_000)
+    .default(7 * 24 * 60 * 60_000),
+});
+
+export type TEmbedConfig = z.infer<typeof embedConfigSchema>;
+
 export const configSchema = z.object({
   version: z.string(),
   permissions: z.object({ maxWriteAttempts: permissionWriteAttemptsSchema }).optional(),
@@ -3220,6 +3258,7 @@ export const configSchema = z.object({
     })
     .default({ socialLogins: defaultSocialLogins }),
   balance: balanceSchema.optional(),
+  embed: embedConfigSchema.optional(),
   transactions: transactionsSchema.optional(),
   speech: z
     .object({
@@ -3805,6 +3844,10 @@ export enum CacheKeys {
    * Key for admin panel OAuth exchange codes (one-time-use, short TTL).
    */
   ADMIN_OAUTH_EXCHANGE = 'ADMIN_OAUTH_EXCHANGE',
+  /**
+   * Key for embed sign-in state and popup handoff codes (one-time-use, short TTL).
+   */
+  EMBED_OAUTH = 'EMBED_OAUTH',
 }
 
 export const AUTH_USER_DOC_BY_ID_PREFIX = 'auth-user-doc-byid';

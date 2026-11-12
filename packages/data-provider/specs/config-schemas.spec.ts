@@ -1,4 +1,5 @@
 import {
+  embedConfigSchema,
   paramDefinitionSchema,
   agentsEndpointSchema,
   azureEndpointSchema,
@@ -1952,5 +1953,43 @@ describe('interfaceSchema agentSelectorLimit', () => {
     expect(normalizeAgentSelectorLimit(0)).toBe(10);
     expect(normalizeAgentSelectorLimit(101)).toBe(10);
     expect(normalizeAgentSelectorLimit('10')).toBe(10);
+  });
+});
+
+describe('embedConfigSchema', () => {
+  it('is off by default and keeps an empty frame list, so nothing becomes frameable', () => {
+    expect(embedConfigSchema.parse({})).toEqual({
+      enabled: false,
+      frameAncestors: [],
+      handoffTtlMs: 300_000,
+      sessionExpiryMs: 7 * 24 * 60 * 60_000,
+    });
+    expect(configSchema.parse({ version: '1.0.0' }).embed).toBeUndefined();
+  });
+
+  it('accepts https origins, self, and loopback origins for local testing', () => {
+    const parsed = embedConfigSchema.parse({
+      enabled: true,
+      frameAncestors: [
+        "'self'",
+        'https://lookerstudio.google.com',
+        'http://127.0.0.1:8766',
+        'http://localhost',
+      ],
+    });
+    expect(parsed.frameAncestors).toHaveLength(4);
+  });
+
+  it('rejects wildcards, paths, plain-HTTP public hosts and CSP keywords', () => {
+    for (const origin of [
+      '*',
+      'https://*.google.com',
+      'https://lookerstudio.google.com/reporting',
+      'http://lookerstudio.google.com',
+      "'unsafe-inline'",
+      'https://a.com https://b.com',
+    ]) {
+      expect(embedConfigSchema.safeParse({ frameAncestors: [origin] }).success).toBe(false);
+    }
   });
 });
