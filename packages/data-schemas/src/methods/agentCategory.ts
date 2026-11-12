@@ -162,18 +162,13 @@ export function createAgentCategoryMethods(mongoose: typeof import('mongoose')):
     grantedBy?: Types.ObjectId | string,
   ) => Promise<boolean>;
   makeCategoryAgentsPrivate: (value: string) => Promise<number>;
-  getValidCategoryValues: () => Promise<string[]>;
-  seedCategories: (
-    categories: Array<{
-      value: string;
-      label?: string;
-      description?: string;
-      order?: number;
-      custom?: boolean;
-    }>,
-  ) => Promise<import('mongoose').mongo.BulkWriteResult>;
   findCategoryByValue: (value: string) => Promise<IAgentCategory | null>;
   createCategory: (categoryData: Partial<IAgentCategory>) => Promise<IAgentCategory>;
+  updateCategory: (
+    value: string,
+    updateData: Partial<IAgentCategory>,
+  ) => Promise<IAgentCategory | null>;
+  deleteCategory: (value: string) => Promise<boolean>;
   getAllCategories: () => Promise<IAgentCategory[]>;
   ensureDefaultCategories: () => Promise<boolean>;
 } {
@@ -223,6 +218,41 @@ export function createAgentCategoryMethods(mongoose: typeof import('mongoose')):
     const AgentCategory = mongoose.models.AgentCategory as Model<IAgentCategory>;
     const category = await AgentCategory.create(categoryData);
     return category.toObject() as IAgentCategory;
+  }
+
+  /**
+   * Find a category by its value
+   * @returns The category, or null when none has that value
+   */
+  async function findCategoryByValue(value: string): Promise<IAgentCategory | null> {
+    const AgentCategory = mongoose.models.AgentCategory as Model<IAgentCategory>;
+    return await AgentCategory.findOne({ value }).lean<IAgentCategory>();
+  }
+
+  /**
+   * Update a category's label, description, order or visibility
+   * @returns The updated category, or null when none has that value
+   */
+  async function updateCategory(
+    value: string,
+    updateData: Partial<IAgentCategory>,
+  ): Promise<IAgentCategory | null> {
+    const AgentCategory = mongoose.models.AgentCategory as Model<IAgentCategory>;
+    return await AgentCategory.findOneAndUpdate(
+      { value },
+      { $set: updateData },
+      { new: true, runValidators: true },
+    ).lean<IAgentCategory>();
+  }
+
+  /**
+   * Delete a category
+   * @returns Whether a category was deleted
+   */
+  async function deleteCategory(value: string): Promise<boolean> {
+    const AgentCategory = mongoose.models.AgentCategory as Model<IAgentCategory>;
+    const result = await AgentCategory.deleteOne({ value });
+    return result.deletedCount > 0;
   }
 
   /**
@@ -385,10 +415,10 @@ export function createAgentCategoryMethods(mongoose: typeof import('mongoose')):
     getCategoryAccess,
     setCategoryAccess,
     makeCategoryAgentsPrivate,
-    getValidCategoryValues,
-    seedCategories,
     findCategoryByValue,
     createCategory,
+    updateCategory,
+    deleteCategory,
     getAllCategories,
     ensureDefaultCategories,
   };

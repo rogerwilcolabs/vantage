@@ -58,7 +58,7 @@ describe('formatToolContent', () => {
   });
 
   describe('unrecognized-provider display images', () => {
-    it.each(['unknown', 'vertexai'])(
+    it.each(['unknown', 'custom-provider'])(
       'retains ordered standalone, remote and embedded images without vision content for %s',
       (provider) => {
         const result: t.MCPToolCallResponse = {
@@ -1310,7 +1310,7 @@ describe('formatToolContent', () => {
         ],
       };
 
-      const [content, artifacts] = formatToolContent(result, 'vertexai' as t.Provider, {
+      const [content, artifacts] = formatToolContent(result, 'unknown' as t.Provider, {
         serverName: 's',
         serverBinding: 'binding',
         toolName: 't',
@@ -1326,7 +1326,7 @@ describe('formatToolContent', () => {
     it('synthesizes the tool-declared app for an unrecognized provider', () => {
       const [, artifacts] = formatToolContent(
         { content: [{ type: 'text', text: 'done' }] },
-        'vertexai' as t.Provider,
+        'unknown' as t.Provider,
         {
           serverName: 's',
           serverBinding: 'binding',
@@ -1351,7 +1351,7 @@ describe('formatToolContent', () => {
         ],
       };
 
-      const [content, artifacts] = formatToolContent(result, 'vertexai' as t.Provider, {
+      const [content, artifacts] = formatToolContent(result, 'unknown' as t.Provider, {
         serverName: 's',
         serverBinding: 'binding',
         toolName: 't',
@@ -1376,7 +1376,7 @@ describe('formatToolContent', () => {
         ],
       };
 
-      const [content, artifacts] = formatToolContent(result, 'vertexai' as t.Provider, {
+      const [content, artifacts] = formatToolContent(result, 'unknown' as t.Provider, {
         serverName: 's',
         serverBinding: 'binding',
         toolName: 't',
@@ -1399,7 +1399,7 @@ describe('formatToolContent', () => {
         ],
       };
 
-      const [content, artifacts] = formatToolContent(result, 'vertexai' as t.Provider);
+      const [content, artifacts] = formatToolContent(result, 'unknown' as t.Provider);
 
       const resource = artifacts?.ui_resources?.data?.[0];
       expect(content).toContain('base64data');
@@ -1424,7 +1424,7 @@ describe('formatToolContent', () => {
         ],
       };
 
-      const [content, artifacts] = formatToolContent(result, 'vertexai' as t.Provider);
+      const [content, artifacts] = formatToolContent(result, 'unknown' as t.Provider);
 
       expect(content).toContain('data:image/png;base64,aW1hZ2U=');
       expect(artifacts?.content).toEqual([]);
@@ -1458,7 +1458,7 @@ describe('formatToolContent', () => {
           ],
         };
 
-        expect(() => formatToolContent(result, 'vertexai' as t.Provider)).toThrow(
+        expect(() => formatToolContent(result, 'unknown' as t.Provider)).toThrow(
           'MCP image result exceeds maximum size of 3 bytes',
         );
       } finally {
@@ -1484,7 +1484,7 @@ describe('formatToolContent', () => {
         ],
       };
 
-      const [content, artifacts] = formatToolContent(result, 'vertexai' as t.Provider, {
+      const [content, artifacts] = formatToolContent(result, 'unknown' as t.Provider, {
         mcpApps: { enabled: false, legacyHtmlEnabled: false },
       });
 
@@ -1512,7 +1512,7 @@ describe('formatToolContent', () => {
         ],
       };
 
-      const [, artifacts] = formatToolContent(result, 'vertexai' as t.Provider, {
+      const [, artifacts] = formatToolContent(result, 'unknown' as t.Provider, {
         serverName: 's',
         serverBinding: 'binding',
         toolName: 't',
@@ -1644,7 +1644,7 @@ describe('formatToolContent', () => {
       const [, recognized] = formatToolContent(echoResult(resource), 'openai', appMetadata);
       const [, unrecognized] = formatToolContent(
         echoResult(resource),
-        'vertexai' as t.Provider,
+        'unknown' as t.Provider,
         appMetadata,
       );
 

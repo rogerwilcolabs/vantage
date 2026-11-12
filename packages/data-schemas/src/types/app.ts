@@ -107,6 +107,8 @@ export interface AppConfig {
   emailChange?: TCustomConfig['emailChange'];
   /** Passkey enrollment configuration */
   passkeys?: TCustomConfig['passkeys'];
+  /** Embedded chat view (iframe) configuration */
+  embed?: TCustomConfig['embed'];
   /** Actions configurations */
   actions?: TCustomConfig['actions'];
   /** Admin-filtered tools */

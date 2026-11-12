@@ -19,7 +19,6 @@ import { useModelSelectorChatContext } from './ModelSelectorChatContext';
 import useSelectMention from '~/hooks/Input/useSelectMention';
 import { useCatalogReady } from '~/hooks/useCatalogWarmup';
 import useModelSpecs from '~/hooks/Agents/specs';
-import { filterItems } from './utils';
 
 type ModelSelectorContextType = {
   // State
@@ -116,8 +115,8 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
         ? localize(category.label as TranslationKeys)
         : category.label,
     }));
-    return groupAgentsByCategory(endpoints, agents, groups);
-  }, [endpoints, agents, categories, localize]);
+    return groupAgentsByCategory(endpoints, agentsQuery.data ?? null, groups);
+  }, [endpoints, agentsQuery.data, categories, localize]);
 
   const getModelDisplayName = useCallback(
     (endpoint: Endpoint, model: string): string => {
@@ -162,12 +161,12 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     agentsMap,
     conversation: endpoint
       ? ({
-        endpoint: endpoint ?? null,
-        model: model ?? null,
-        spec: spec ?? null,
-        agent_id: agent_id ?? null,
-        assistant_id: assistant_id ?? null,
-      } as any)
+          endpoint: endpoint ?? null,
+          model: model ?? null,
+          spec: spec ?? null,
+          agent_id: agent_id ?? null,
+          assistant_id: assistant_id ?? null,
+        } as any)
       : null,
     assistantsMap,
     setSelectedValues,

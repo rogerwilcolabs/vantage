@@ -71,6 +71,24 @@ export const useRefreshTokenMutation = (
   });
 };
 
+/* Embed sign-in */
+export const useEmbedExchangeMutation = (): UseMutationResult<
+  t.TEmbedAuthResponse | t.TEmbedAuthError,
+  unknown,
+  string,
+  unknown
+> => useMutation([MutationKeys.embedExchange], { mutationFn: dataService.embedExchange });
+
+export const useEmbedLogoutMutation = (): UseMutationResult<void, unknown, void, unknown> => {
+  const queryClient = useQueryClient();
+  return useMutation([MutationKeys.embedLogout], {
+    mutationFn: () => dataService.embedLogout(),
+    onSettled: () => {
+      queryClient.removeQueries();
+    },
+  });
+};
+
 /* User */
 export const useDeleteUserMutation = (
   options?: t.MutationOptions<unknown, t.TDeleteUserRequest | undefined>,

@@ -54,7 +54,7 @@ function fitsPersistedAppLimit(resource: UIResource, maxBytes: number): boolean 
   }
 }
 
-function getMCPImageDataMaxBytes(): number {
+export function getMCPImageDataMaxBytes(): number {
   const raw = process.env.MCP_IMAGE_DATA_MAX_BYTES;
   if (!raw) {
     return DEFAULT_MCP_IMAGE_DATA_MAX_BYTES;
@@ -507,8 +507,8 @@ export function formatToolContent(
   ) {
     const resolvedResource =
       metadata.resolvedAppResource?.uri === metadata.resourceUri &&
-        isMcpAppMimeType(metadata.resolvedAppResource.mimeType) &&
-        hasUsableAppBody(metadata.resolvedAppResource)
+      isMcpAppMimeType(metadata.resolvedAppResource.mimeType) &&
+      hasUsableAppBody(metadata.resolvedAppResource)
         ? metadata.resolvedAppResource
         : undefined;
     let resolvedBody = '';

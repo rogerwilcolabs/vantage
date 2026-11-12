@@ -82,6 +82,34 @@ describe('OpenID OAuth callback helpers', () => {
     );
   });
 
+  it('sends a failed embed sign-in to the embed callback page, not the app login', () => {
+    const res = createResponse();
+    Object.assign(res, { req: { query: { state: `embed_${'a'.repeat(64)}` } } });
+
+    redirectToAuthFailure(res, {
+      clientDomain: 'http://client.test',
+      authFailedError: 'auth_banned',
+    });
+
+    expect(res.redirect).toHaveBeenCalledWith(
+      'http://client.test/embed/callback?error=auth_banned',
+    );
+  });
+
+  it('keeps the login page for non-embed states that merely start with embed_', () => {
+    const res = createResponse();
+    Object.assign(res, { req: { query: { state: 'embed_not-a-real-state' } } });
+
+    redirectToAuthFailure(res, {
+      clientDomain: 'http://client.test',
+      authFailedError: 'auth_failed',
+    });
+
+    expect(res.redirect).toHaveBeenCalledWith(
+      'http://client.test/login?redirect=false&error=auth_failed',
+    );
+  });
+
   it('logs OpenID callback failures with structured OAuth context', () => {
     const req = createRequest({
       query: {

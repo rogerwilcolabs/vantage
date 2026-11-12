@@ -1,3 +1,4 @@
+import { EMBED_BASE_PATH } from 'librechat-data-provider';
 import type { NextFunction, Response } from 'express';
 import {
   buildOAuthFailureLog,
@@ -5,6 +6,7 @@ import {
   type OAuthFailureLog,
   type OAuthFailureRequest,
 } from './failure';
+import { isEmbedOAuthState } from '../embed/auth';
 
 type LoginFunction = (
   user: unknown,
@@ -65,6 +67,14 @@ export function redirectToAuthFailure(
   res: Response,
   { clientDomain, authFailedError }: AuthFailureRedirectOptions,
 ): void {
+  /* The embed popup must not land on the full app's login page, which also signs the browser's
+   * existing Vantage session straight back in; its own page tells the viewer to try again. */
+  if (isEmbedOAuthState(res.req?.query?.state)) {
+    res.redirect(
+      `${clientDomain}${EMBED_BASE_PATH}/callback?error=${encodeURIComponent(authFailedError)}`,
+    );
+    return;
+  }
   res.redirect(`${clientDomain}/login?redirect=false&error=${authFailedError}`);
 }
 

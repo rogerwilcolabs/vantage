@@ -107,16 +107,16 @@ function createOboToolCallErrorMessage(
   return `${logPrefix} ${error.userMessage} Cannot execute tool ${toolName}. ${failureSuffix}`;
 }
 
-class OAuthRecoveryTakeoverRequired extends Error { }
+class OAuthRecoveryTakeoverRequired extends Error {}
 
 type OAuthReconnectResult =
   | { connected: true }
   | {
-    connected: false;
-    error: unknown;
-    oauthHandled: boolean;
-    source?: t.OAuthHandledSource;
-  };
+      connected: false;
+      error: unknown;
+      oauthHandled: boolean;
+      source?: t.OAuthHandledSource;
+    };
 
 const OAUTH_RECOVERY_RECONNECT_ATTEMPTS = 3;
 const OAUTH_RECOVERY_RECONNECT_DELAY_MS = 2000;
@@ -302,10 +302,10 @@ export class MCPManager extends UserConnectionManager {
     const userId = opts.user?.id;
     const fence = userId
       ? this.createConnectionMutationFence(
-        userId,
-        opts.serverName,
-        opts.capabilityProfile ?? STANDARD_MCP_CAPABILITY_PROFILE,
-      )
+          userId,
+          opts.serverName,
+          opts.capabilityProfile ?? STANDARD_MCP_CAPABILITY_PROFILE,
+        )
       : undefined;
     let connection: Promise<MCPConnection>;
     try {
@@ -1718,10 +1718,10 @@ Please follow these instructions when using tools from the respective MCP server
           isDbSourced || isPluginSourced(rawConfig)
             ? (rawConfig as t.MCPOptions)
             : await preProcessGraphTokens(rawConfig as t.MCPOptions, {
-              user,
-              graphTokenResolver,
-              scopes: process.env.GRAPH_API_SCOPES,
-            });
+                user,
+                graphTokenResolver,
+                scopes: process.env.GRAPH_API_SCOPES,
+              });
         const directBearerRecovery = usesDirectOpenIDBearerRecovery(rawConfig);
         const scheduledConfig = await resolveScheduledMCPBearerConfig({
           user,
@@ -1786,10 +1786,10 @@ Please follow these instructions when using tools from the respective MCP server
           }
           const oboTrusted = oboTrustChecker
             ? await oboTrustChecker({
-              source: rawConfig.source,
-              author: rawConfig.author,
-              dbId: rawConfig.dbId,
-            })
+                source: rawConfig.source,
+                author: rawConfig.author,
+                dbId: rawConfig.dbId,
+              })
             : true;
           if (!oboTrusted) {
             logger.warn(
@@ -2166,7 +2166,12 @@ Please follow these instructions when using tools from the respective MCP server
           await this.updateUserLastActivity(userId);
         }
         this.checkIdleConnections();
-        const toolResult = result as t.MCPToolCallResponse;
+        /** Slides thumbnails arrive as links the model cannot open; this attaches the image. */
+        const toolResult = await attachSlideThumbnail({
+          serverName,
+          toolName,
+          result: result as t.MCPToolCallResponse,
+        });
         const admittedMCPApps = mcpApps ?? DEFAULT_MCP_APPS_POLICY;
 
         // The app routes reject OBO, Graph-token, and runtime body-placeholder configs, so do not
@@ -2265,14 +2270,14 @@ Please follow these instructions when using tools from the respective MCP server
         const serverBinding =
           resourceMeta && connection && checkedOutTarget && userId && this.appBindingCodec
             ? this.appBindingCodec.create(
-              this.getAppBindingSubject(
-                serverName,
-                userId,
-                user?.tenantId,
-                checkedOutTarget,
-                connection,
-              ),
-            )
+                this.getAppBindingSubject(
+                  serverName,
+                  userId,
+                  user?.tenantId,
+                  checkedOutTarget,
+                  connection,
+                ),
+              )
             : undefined;
         if (resourceMeta && !serverBinding) {
           resourceMeta = undefined;
@@ -2285,14 +2290,14 @@ Please follow these instructions when using tools from the respective MCP server
             provider,
             appCompatible
               ? {
-                serverName,
-                toolName,
-                resourceUri: resourceMeta?.uri,
-                resolvedAppResource,
-                serverBinding,
-                toolArgs: toolArguments,
-                mcpApps: admittedMCPApps,
-              }
+                  serverName,
+                  toolName,
+                  resourceUri: resourceMeta?.uri,
+                  resolvedAppResource,
+                  serverBinding,
+                  toolArgs: toolArguments,
+                  mcpApps: admittedMCPApps,
+                }
               : { mcpApps: admittedMCPApps },
           ),
           toolResult?.isError === true,
@@ -2475,27 +2480,27 @@ Please follow these instructions when using tools from the respective MCP server
         const standardOAuth = isOAuthServer(currentOptions) || connection.usesOAuth();
         const attachSharedOAuthHandler = standardOAuth
           ? (relay: OAuthLifecycleRelay) =>
-            MCPConnectionFactory.attachRequestOAuthHandler(
-              {
-                serverName,
-                serverConfig: currentOptions,
-                dbSourced: isUserSourced(config),
-                skipEnvProcessing: true,
-                capabilityProfile: MCP_APPS_CAPABILITY_PROFILE,
-                ...allowlists,
-              },
-              {
-                useOAuth: true,
-                user,
-                flowManager,
-                tokenMethods,
-                oauthStart: relay.start,
-                oauthEnd: relay.end,
-                customUserVars,
-                onOAuthCredentialsChanging,
-              },
-              connection!,
-            )
+              MCPConnectionFactory.attachRequestOAuthHandler(
+                {
+                  serverName,
+                  serverConfig: currentOptions,
+                  dbSourced: isUserSourced(config),
+                  skipEnvProcessing: true,
+                  capabilityProfile: MCP_APPS_CAPABILITY_PROFILE,
+                  ...allowlists,
+                },
+                {
+                  useOAuth: true,
+                  user,
+                  flowManager,
+                  tokenMethods,
+                  oauthStart: relay.start,
+                  oauthEnd: relay.end,
+                  customUserVars,
+                  onOAuthCredentialsChanging,
+                },
+                connection!,
+              )
           : undefined;
 
         const recover = async (error: unknown): Promise<void> => {

@@ -625,7 +625,7 @@ async function removeAgentIdsFromEdges(
   let stalledPasses = 0;
   let sweeps = 0;
   let after: Types.ObjectId | undefined;
-  for (; ;) {
+  for (;;) {
     const graphs = await Agent.find(after == null ? filter : { ...filter, _id: { $gt: after } })
       .sort({ _id: 1 })
       .limit(EDGE_CLEANUP_BATCH)
@@ -1297,12 +1297,12 @@ export function createAgentMethods(
         extractMCPServerNames(agentData.tools as string[] | undefined),
     };
 
-    const createdAgent = await withCodeEnvironmentReference(
+    const createdAgent = await withCodeEnvironmentReferences(
       mongoose,
       codeEnvironmentReferences(agentData),
       async () => (await Agent.create(initialAgentData)).toObject() as IAgent,
-      async (createdAgent) => {
-        await Agent.deleteOne({ _id: createdAgent._id });
+      async (created) => {
+        await Agent.deleteOne({ _id: created._id });
       },
     );
     await refreshCategoryAccess(createdAgent);
@@ -2031,11 +2031,11 @@ export function createAgentMethods(
       const migratedEntries =
         authoredAgents.length > 0
           ? await AclEntry.find({
-            resourceType: { $in: [ResourceType.AGENT, ResourceType.REMOTE_AGENT] },
-            resourceId: { $in: authoredAgents.map((a) => a._id) },
-          })
-            .select('resourceId')
-            .lean()
+              resourceType: { $in: [ResourceType.AGENT, ResourceType.REMOTE_AGENT] },
+              resourceId: { $in: authoredAgents.map((a) => a._id) },
+            })
+              .select('resourceId')
+              .lean()
           : [];
       const migratedIds = new Set(migratedEntries.map((e) => e.resourceId.toString()));
       const legacyAgents = authoredAgents.filter((a) => !migratedIds.has(a._id.toString()));
@@ -2043,8 +2043,8 @@ export function createAgentMethods(
       const soleOwnedAgents =
         soleOwnedObjectIds.length > 0
           ? await Agent.find({ _id: { $in: soleOwnedObjectIds } })
-            .select('id _id tenantId')
-            .lean()
+              .select('id _id tenantId')
+              .lean()
           : [];
 
       const allAgents = [...soleOwnedAgents, ...legacyAgents];
@@ -2279,9 +2279,9 @@ export function createAgentMethods(
       const favoritedRows =
         favoritedAgentIds.size > 0
           ? ((await Agent.find(
-            { $and: [baseQuery, { id: { $in: [...favoritedAgentIds] } }] },
-            { _id: 1, id: 1, tenantId: 1 },
-          ).lean()) as Array<{ _id: Types.ObjectId; id: string; tenantId?: string | null }>)
+              { $and: [baseQuery, { id: { $in: [...favoritedAgentIds] } }] },
+              { _id: 1, id: 1, tenantId: 1 },
+            ).lean()) as Array<{ _id: Types.ObjectId; id: string; tenantId?: string | null }>)
           : [];
       const decodedCursor = readCursor();
       const cursorCount = decodedCursor ? Number(decodedCursor.primary) : null;
@@ -2333,9 +2333,9 @@ export function createAgentMethods(
       const favoritedDocs =
         pageFavorited.length > 0
           ? ((await Agent.find(
-            { $and: [baseQuery, { _id: { $in: pageFavorited.map((row) => row._id) } }] },
-            projection,
-          ).lean()) as Array<Record<string, unknown>>)
+              { $and: [baseQuery, { _id: { $in: pageFavorited.map((row) => row._id) } }] },
+              projection,
+            ).lean()) as Array<Record<string, unknown>>)
           : [];
       const favoritedById = new Map(favoritedDocs.map((agent) => [String(agent._id), agent]));
       const data = pageFavorited
@@ -2712,11 +2712,11 @@ export function createAgentMethods(
     const nextCursor =
       hasMore && lastAgent
         ? Buffer.from(
-          JSON.stringify({
-            updatedAt: lastAgent.updatedAt.toISOString(),
-            _id: lastAgent._id.toString(),
-          }),
-        ).toString('base64')
+            JSON.stringify({
+              updatedAt: lastAgent.updatedAt.toISOString(),
+              _id: lastAgent._id.toString(),
+            }),
+          ).toString('base64')
         : null;
 
     return { data, has_more: hasMore, after: nextCursor };

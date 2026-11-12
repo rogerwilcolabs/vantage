@@ -25,8 +25,10 @@ import { useChatSettings } from '~/Providers/ChatSettingsContext';
 import ApprovalProvider from './Messages/Content/ApprovalContext';
 import ConversationStarters from './Input/ConversationStarters';
 import ProjectBadge from '~/components/Projects/ProjectBadge';
+import { useEmbedContext } from '~/components/Embed/context';
 import { OwnerTextProvider } from './Messages/PrivateText';
 import { TargetContext } from '~/Providers/TargetContext';
+import EmbedHeader from '~/components/Embed/Header';
 import PendingTurn from './Messages/PendingTurn';
 import { FLAT_THREAD } from './Messages/Thread';
 import useTarget from '~/hooks/Chat/target';
@@ -107,6 +109,7 @@ function ChatViewPane({
   });
 
   const fileMap = useFileMapContext();
+  const embed = useEmbedContext();
   const chat = useChatContext();
   const target = useTarget(chat.conversation, chat.setConversation);
   const agentsMap = useAgentsMapContext();
@@ -164,12 +167,16 @@ function ChatViewPane({
                             project={project}
                             landingFooter={landingFooter}
                             configuredFooter={configuredFooter}
-                            renderHeader={({ parentConversationId, readOnly }) => (
-                              <Header
-                                parentConversationId={parentConversationId}
-                                readOnly={readOnly}
-                              />
-                            )}
+                            renderHeader={({ parentConversationId, readOnly }) =>
+                              embed ? (
+                                <EmbedHeader />
+                              ) : (
+                                <Header
+                                  parentConversationId={parentConversationId}
+                                  readOnly={readOnly}
+                                />
+                              )
+                            }
                             renderBadge={(projectId) => <ProjectBadge projectId={projectId} />}
                             messagesSlots={messagesSlots}
                             landing={<Landing centerFormOnLanding={centerFormOnLanding} />}

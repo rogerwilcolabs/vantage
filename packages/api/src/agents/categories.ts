@@ -120,7 +120,13 @@ export function createAgentCategoryHandlers(
   'list' | 'create' | 'update' | 'reorder' | 'remove' | 'getAccess' | 'setAccess' | 'makePrivate',
   CategoryHandler
 > {
-  const builtInValues = new Set(deps.getDefaultCategoryValues());
+  /** Read on first use rather than when the routes are built, so mounting them never depends on
+   * the category store being ready. */
+  let builtInCache: Set<string> | undefined;
+  const isBuiltIn = (value: string): boolean => {
+    builtInCache ??= new Set(deps.getDefaultCategoryValues());
+    return builtInCache.has(value);
+  };
 
   const toManaged = (category: AgentCategory, count: number): TManagedAgentCategory => ({
     value: category.value,
@@ -129,7 +135,7 @@ export function createAgentCategoryHandlers(
     count,
     order: category.order,
     isActive: category.isActive,
-    builtIn: builtInValues.has(category.value),
+    builtIn: isBuiltIn(category.value),
     accessCount: category.access?.length ?? 0,
   });
 
@@ -337,7 +343,7 @@ export function createAgentCategoryHandlers(
         sendError(res, 404, 'category_not_found');
         return;
       }
-      if (builtInValues.has(value)) {
+      if (isBuiltIn(value)) {
         sendError(res, 400, 'category_protected');
         return;
       }
