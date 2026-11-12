@@ -54,10 +54,15 @@ export * from './accessPermissions';
 export * from './keys';
 /* api call helpers */
 export * from './headers-helpers';
+export * from './embed';
 export {
   loginPage,
   registerPage,
   apiBaseUrl,
+  embedPage,
+  embedLogout,
+  embedExchange,
+  embedLoginStart,
   sharedFileDownload,
   buildLoginRedirectUrl,
 } from './api-endpoints';

@@ -1,5 +1,6 @@
 import type { StartupConfigContext } from './config';
 import type { AssistantsEndpoint } from './schemas';
+import { EMBED_BASE_PATH, isEmbedMode } from './embed';
 import { ResourceType } from './accessPermissions';
 import * as q from './types/queries';
 
@@ -205,7 +206,17 @@ export const loginFacebook = () => `${BASE_URL}/api/auth/facebook`;
 export const loginGoogle = () => `${BASE_URL}/api/auth/google`;
 
 export const refreshToken = (retry?: boolean) =>
-  `${BASE_URL}/api/auth/refresh${retry === true ? '?retry=true' : ''}`;
+  isEmbedMode()
+    ? embedRefresh()
+    : `${BASE_URL}/api/auth/refresh${retry === true ? '?retry=true' : ''}`;
+
+export const embedAuth = () => `${BASE_URL}/api/embed/auth`;
+export const embedRefresh = () => `${embedAuth()}/refresh`;
+export const embedExchange = () => `${embedAuth()}/exchange`;
+export const embedLogout = () => `${embedAuth()}/logout`;
+export const embedLoginStart = (codeChallenge: string) =>
+  `${BASE_URL}/api/embed/oauth/openid?code_challenge=${encodeURIComponent(codeChallenge)}`;
+export const embedPage = () => `${BASE_URL}${EMBED_BASE_PATH}`;
 
 export const requestPasswordReset = () => `${BASE_URL}/api/auth/requestPasswordReset`;
 
@@ -225,6 +236,10 @@ const LOGIN_PATH_RE = /(?:^|\/)login(?:\/|$)/;
  * Returns plain `/login` (no param) when already on a login route to prevent recursive nesting.
  */
 export function buildLoginRedirectUrl(pathname?: string, search?: string, hash?: string): string {
+  /** The full login page refuses to be framed; the embed view has its own sign-in screen. */
+  if (isEmbedMode()) {
+    return EMBED_BASE_PATH;
+  }
   const p = pathname ?? window.location.pathname;
   if (LOGIN_PATH_RE.test(p)) {
     return '/login';

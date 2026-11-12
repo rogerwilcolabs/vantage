@@ -80,6 +80,8 @@ export interface AppConfig {
   cloudfront?: CloudFrontConfig;
   /** Registration configurations */
   registration?: TCustomConfig['registration'];
+  /** Embedded chat view (iframe) configuration */
+  embed?: TCustomConfig['embed'];
   /** Actions configurations */
   actions?: TCustomConfig['actions'];
   /** Admin-filtered tools */

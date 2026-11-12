@@ -71,6 +71,8 @@ const namespaces = {
     CacheKeys.ADMIN_OAUTH_EXCHANGE,
     Time.THIRTY_SECONDS,
   ),
+  /* Entries carry their own TTLs (sign-in state, popup handoff) */
+  [CacheKeys.EMBED_OAUTH]: standardCache(CacheKeys.EMBED_OAUTH),
 };
 
 /**

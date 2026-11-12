@@ -11,6 +11,7 @@ import {
 import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
 import AgentMarketplace from '~/components/Agents/Marketplace';
 import { OAuthSuccess, OAuthError } from '~/components/OAuth';
+import { createEmbedRouter, isEmbedPathname } from './Embed';
 import { AuthContextProvider } from '~/hooks/AuthContext';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import StartupLayout from './Layouts/Startup';
@@ -59,147 +60,152 @@ const loadProjectWorkspace = () =>
 const baseEl = document.querySelector('base');
 const baseHref = baseEl?.getAttribute('href') || '/';
 
-export const router = createBrowserRouter(
-  [
-    {
-      path: 'share/:shareId',
-      element: <ShareRoute />,
-      errorElement: <RouteErrorBoundary />,
-    },
-    {
-      path: 'oauth',
-      errorElement: <RouteErrorBoundary />,
-      children: [
-        {
-          path: 'success',
-          element: <OAuthSuccess />,
-        },
-        {
-          path: 'error',
-          element: <OAuthError />,
-        },
-      ],
-    },
-    {
-      path: '/',
-      element: <StartupLayout />,
-      errorElement: <RouteErrorBoundary />,
-      children: [
-        {
-          path: 'register',
-          element: <Registration />,
-        },
-        {
-          path: 'forgot-password',
-          element: <RequestPasswordReset />,
-        },
-        {
-          path: 'reset-password',
-          element: <ResetPassword />,
-        },
-      ],
-    },
-    {
-      path: 'verify',
-      element: <VerifyEmail />,
-      errorElement: <RouteErrorBoundary />,
-    },
-    {
-      element: <AuthLayout />,
-      errorElement: <RouteErrorBoundary />,
-      children: [
-        {
-          path: '/',
-          element: <LoginLayout />,
-          children: [
-            {
-              path: 'login',
-              element: <Login />,
-            },
-            {
-              path: 'login/2fa',
-              element: <TwoFactorScreen />,
-            },
-          ],
-        },
-        dashboardRoutes,
-        {
-          path: '/',
-          element: <Root />,
-          children: [
-            {
-              index: true,
-              element: <Navigate to="/c/new" replace={true} />,
-            },
-            {
-              path: 'c/:conversationId?',
-              element: <ChatRoute />,
-            },
-            {
-              path: 'search',
-              element: <Search />,
-            },
-            {
-              path: 'prompts',
-              element: <Navigate to="/c/new" replace={true} />,
-            },
-            {
-              /** Prompts are created from a dialog, so there is no "new" page to land on */
-              path: 'prompts/new',
-              element: <Navigate to="/c/new" replace={true} />,
-            },
-            {
-              path: 'prompts/:promptId',
-              lazy: loadInlinePromptsView,
-            },
-            {
-              path: 'skills',
-              lazy: loadSkillsView,
-            },
-            {
-              path: 'insights',
-              lazy: loadInsightsView,
-            },
-            {
-              path: 'skills/new',
-              lazy: loadSkillsView,
-            },
-            {
-              path: 'skills/:skillId',
-              lazy: loadSkillsView,
-            },
-            {
-              path: 'skills/:skillId/edit',
-              lazy: loadSkillsView,
-            },
-            {
-              path: 'projects',
-              lazy: loadProjectsView,
-            },
-            {
-              path: 'projects/:projectId',
-              lazy: loadProjectWorkspace,
-            },
-            {
-              path: 'agents',
-              element: (
-                <MarketplaceProvider>
-                  <AgentMarketplace />
-                </MarketplaceProvider>
-              ),
-            },
-            {
-              path: 'agents/:category',
-              element: (
-                <MarketplaceProvider>
-                  <AgentMarketplace />
-                </MarketplaceProvider>
-              ),
-            },
-          ],
-        },
-      ],
-    },
-  ],
-  { basename: baseHref },
-);
+const createAppRouter = () =>
+  createBrowserRouter(
+    [
+      {
+        path: 'share/:shareId',
+        element: <ShareRoute />,
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: 'oauth',
+        errorElement: <RouteErrorBoundary />,
+        children: [
+          {
+            path: 'success',
+            element: <OAuthSuccess />,
+          },
+          {
+            path: 'error',
+            element: <OAuthError />,
+          },
+        ],
+      },
+      {
+        path: '/',
+        element: <StartupLayout />,
+        errorElement: <RouteErrorBoundary />,
+        children: [
+          {
+            path: 'register',
+            element: <Registration />,
+          },
+          {
+            path: 'forgot-password',
+            element: <RequestPasswordReset />,
+          },
+          {
+            path: 'reset-password',
+            element: <ResetPassword />,
+          },
+        ],
+      },
+      {
+        path: 'verify',
+        element: <VerifyEmail />,
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        element: <AuthLayout />,
+        errorElement: <RouteErrorBoundary />,
+        children: [
+          {
+            path: '/',
+            element: <LoginLayout />,
+            children: [
+              {
+                path: 'login',
+                element: <Login />,
+              },
+              {
+                path: 'login/2fa',
+                element: <TwoFactorScreen />,
+              },
+            ],
+          },
+          dashboardRoutes,
+          {
+            path: '/',
+            element: <Root />,
+            children: [
+              {
+                index: true,
+                element: <Navigate to="/c/new" replace={true} />,
+              },
+              {
+                path: 'c/:conversationId?',
+                element: <ChatRoute />,
+              },
+              {
+                path: 'search',
+                element: <Search />,
+              },
+              {
+                path: 'prompts',
+                element: <Navigate to="/c/new" replace={true} />,
+              },
+              {
+                /** Prompts are created from a dialog, so there is no "new" page to land on */
+                path: 'prompts/new',
+                element: <Navigate to="/c/new" replace={true} />,
+              },
+              {
+                path: 'prompts/:promptId',
+                lazy: loadInlinePromptsView,
+              },
+              {
+                path: 'skills',
+                lazy: loadSkillsView,
+              },
+              {
+                path: 'insights',
+                lazy: loadInsightsView,
+              },
+              {
+                path: 'skills/new',
+                lazy: loadSkillsView,
+              },
+              {
+                path: 'skills/:skillId',
+                lazy: loadSkillsView,
+              },
+              {
+                path: 'skills/:skillId/edit',
+                lazy: loadSkillsView,
+              },
+              {
+                path: 'projects',
+                lazy: loadProjectsView,
+              },
+              {
+                path: 'projects/:projectId',
+                lazy: loadProjectWorkspace,
+              },
+              {
+                path: 'agents',
+                element: (
+                  <MarketplaceProvider>
+                    <AgentMarketplace />
+                  </MarketplaceProvider>
+                ),
+              },
+              {
+                path: 'agents/:category',
+                element: (
+                  <MarketplaceProvider>
+                    <AgentMarketplace />
+                  </MarketplaceProvider>
+                ),
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    { basename: baseHref },
+  );
+
+export const router = isEmbedPathname(window.location.pathname, baseHref)
+  ? createEmbedRouter(baseHref)
+  : createAppRouter();

@@ -8,6 +8,7 @@ const mockSendOpenIDAuthResponse = jest.fn();
 const mockGetLogStores = jest.fn();
 const mockCheckBan = jest.fn();
 const mockGenerateToken = jest.fn();
+const mockCompleteEmbedLogin = jest.fn();
 const mockLogger = { info: jest.fn(), error: jest.fn() };
 
 jest.mock('librechat-data-provider', () => ({
@@ -53,6 +54,10 @@ jest.mock('~/models', () => ({
   generateToken: (...args) => mockGenerateToken(...args),
 }));
 
+jest.mock('~/server/services/EmbedAuth', () => ({
+  getEmbedAuth: async () => ({ completeLogin: (...args) => mockCompleteEmbedLogin(...args) }),
+}));
+
 const { createOAuthHandler } = require('./oauth');
 
 const ORIGINAL_ENV = process.env;
@@ -96,6 +101,34 @@ describe('createOAuthHandler', () => {
     mockGenerateToken.mockResolvedValue('jwt-token');
     mockGenerateAdminExchangeCode.mockResolvedValue('exchange-code');
     mockSendOpenIDAuthResponse.mockResolvedValue('app-token');
+    mockCompleteEmbedLogin.mockResolvedValue(false);
+  });
+
+  it('lets the embed popup handoff answer embed sign-ins without setting app cookies', async () => {
+    mockIsAdminPanelRedirect.mockReturnValue(false);
+    mockCompleteEmbedLogin.mockResolvedValue(true);
+    const handler = createOAuthHandler('http://localhost:3080');
+    const req = buildReq();
+    const res = buildRes();
+
+    await handler(req, res, jest.fn());
+
+    expect(mockCompleteEmbedLogin).toHaveBeenCalledWith(req, res);
+    expect(mockSetAuthTokens).not.toHaveBeenCalled();
+    expect(mockSendOpenIDAuthResponse).not.toHaveBeenCalled();
+    expect(mockGenerateAdminExchangeCode).not.toHaveBeenCalled();
+    expect(res.redirect).not.toHaveBeenCalled();
+  });
+
+  it('checks the ban before an embed sign-in can complete', async () => {
+    mockCheckBan.mockImplementation(async (req) => {
+      req.banned = true;
+    });
+    const handler = createOAuthHandler('http://localhost:3080');
+
+    await handler(buildReq(), buildRes(), jest.fn());
+
+    expect(mockCompleteEmbedLogin).not.toHaveBeenCalled();
   });
 
   afterAll(() => {

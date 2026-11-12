@@ -1,4 +1,6 @@
+import sharp from 'sharp';
 import { logger } from '@librechat/data-schemas';
+import { HARD_MAX_TOOL_RESULT_CHARS } from '@librechat/agents';
 import type * as t from './types';
 import { getSafeErrorMetadata } from '~/utils/errors';
 import { getMCPImageDataMaxBytes } from './parsers';
@@ -11,6 +13,17 @@ const THUMBNAIL_FETCH_TIMEOUT_MS = 15_000;
 /** Without this the model only has a link it cannot open, and describes the slide from guesswork. */
 const THUMBNAIL_UNAVAILABLE_NOTE =
   'The slide image could not be loaded, so you have not seen this slide. Do not describe how it looks.';
+/**
+ * The agents runtime caps what a tool result may add to the model's input at
+ * `HARD_MAX_TOOL_RESULT_CHARS`, base64 included, and silently drops a larger image: the chat
+ * still shows it, but the model only gets the link. A photo slide's PNG thumbnail is usually
+ * over that, so images are kept to 60% of the cap once base64-encoded, leaving room for the
+ * result's text.
+ */
+const MODEL_IMAGE_MAX_BYTES = Math.floor(((HARD_MAX_TOOL_RESULT_CHARS * 0.6) / 4) * 3);
+/** Wide enough for the model to read slide text and spot layout problems. */
+const MODEL_IMAGE_MAX_WIDTH = 1280;
+const JPEG_QUALITIES = [80, 65, 50, 35];
 
 type ThumbnailResponse = t.MCPToolCallResponse & { structuredContent?: { contentUrl?: unknown } };
 
@@ -51,6 +64,31 @@ function isThumbnailUrl(url: string): boolean {
   }
 }
 
+/**
+ * The image as the model can receive it: unchanged when it already fits, otherwise a smaller JPEG.
+ * `null` when it cannot be brought under the limit or is not an image `sharp` can read.
+ */
+async function fitForModel(
+  bytes: Buffer,
+  mimeType: string,
+): Promise<{ bytes: Buffer; mimeType: string } | null> {
+  if (bytes.length <= MODEL_IMAGE_MAX_BYTES) {
+    return { bytes, mimeType };
+  }
+  try {
+    const resized = sharp(bytes).resize({ width: MODEL_IMAGE_MAX_WIDTH, withoutEnlargement: true });
+    for (const quality of JPEG_QUALITIES) {
+      const jpeg = await resized.clone().jpeg({ quality, mozjpeg: true }).toBuffer();
+      if (jpeg.length <= MODEL_IMAGE_MAX_BYTES) {
+        return { bytes: jpeg, mimeType: 'image/jpeg' };
+      }
+    }
+  } catch (error) {
+    logger.warn('[MCP] Slide thumbnail could not be resized', getSafeErrorMetadata(error));
+  }
+  return null;
+}
+
 async function downloadThumbnail(
   url: string,
   fetchImage: typeof fetch,
@@ -71,7 +109,11 @@ async function downloadThumbnail(
   if (bytes.length === 0 || bytes.length > maxBytes) {
     return null;
   }
-  return { type: 'image', mimeType, data: bytes.toString('base64') };
+  const fitted = await fitForModel(bytes, mimeType);
+  if (!fitted) {
+    return null;
+  }
+  return { type: 'image', mimeType: fitted.mimeType, data: fitted.bytes.toString('base64') };
 }
 
 /**

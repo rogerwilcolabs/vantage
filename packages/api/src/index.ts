@@ -59,6 +59,8 @@ export * from './flow/manager';
 export * from './middleware';
 /* Security */
 export * from './security';
+/* Embedded chat view */
+export * from './embed';
 /* Content protection */
 export * from './protection';
 /* Imports */

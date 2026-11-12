@@ -32,6 +32,7 @@ const {
   ErrorController,
   QUERY_DEVTOOLS_HEADER,
   createSecurityHeaders,
+  createEmbedFrameHeaders,
   performStartupChecks,
   handleJsonParseError,
   initializeFileStorage,
@@ -547,6 +548,13 @@ if (cluster.isMaster) {
 
     const cspPolicy = createCspPolicy();
     const shellCache = shellCacheHeaders(cspPolicy != null);
+    /* Only the `/embed` view may be framed, and only by the sites `embed.frameAncestors` lists. */
+    const embedFrameHeaders = baseAppConfig?.embed
+      ? createEmbedFrameHeaders(baseAppConfig.embed)
+      : null;
+    if (embedFrameHeaders) {
+      app.use(embedFrameHeaders);
+    }
 
     const sendIndexHtml = (req, res) => {
       res.set(shellCache);
@@ -558,8 +566,9 @@ if (cluster.isMaster) {
       updatedIndexHtml = maybeInjectQueryDevtoolsBootstrap(updatedIndexHtml, req);
 
       /* Nonce last: every injected script above must be stamped too. */
-      if (cspPolicy) {
-        const csp = issueCsp(cspPolicy);
+      const shellCspPolicy = res.locals.embedCspPolicy ?? cspPolicy;
+      if (shellCspPolicy) {
+        const csp = issueCsp(shellCspPolicy);
         res.set(csp.headerName, csp.headerValue);
         updatedIndexHtml = applyCspNonce(updatedIndexHtml, csp.nonce);
       }
@@ -630,6 +639,7 @@ if (cluster.isMaster) {
     /** Routes */
     app.use('/oauth', preAuthTenantMiddleware, routes.oauth);
     app.use('/api/auth', preAuthTenantMiddleware, routes.auth);
+    app.use('/api/embed', preAuthTenantMiddleware, routes.embed);
     app.use('/api/insights', routes.insights);
     app.use('/api/admin', routes.adminAuth);
     app.use('/api/admin/skills', routes.adminSkills);
