@@ -1,7 +1,9 @@
-import { useMemo, useState, useEffect } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useMemo, useState, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { Tools } from 'librechat-data-provider';
+import { parseJsonField } from '@librechat/chat';
 import { Globe, ChevronDown, Info } from 'lucide-react';
+import { ROW_GLYPH_SLOT, useToolPreparation, useExpandCollapse } from '@librechat/chat/components';
 import {
   Button,
   HoverCard,
@@ -10,6 +12,15 @@ import {
   HoverCardContent,
   disclosureChevronVariants,
 } from '@librechat/client';
+import {
+  useRowHandoff,
+  GeneratedToolLabelContext,
+  useToolExpansion,
+  useToolContentRequest,
+  toolPanelSpacingClassName,
+  useToolCallIntent,
+  useLazyCollapseBody,
+} from '@librechat/chat/react';
 import type {
   TAttachment,
   ValidSource,
@@ -18,19 +29,15 @@ import type {
   AnswerBoxResult,
 } from 'librechat-data-provider';
 import { FaviconImage, getCleanDomain } from '~/components/Web/SourceHovercard';
-import { useLocalize, useExpandCollapse, useLazyCollapseBody } from '~/hooks';
 import { collectSources, getUniqueDomainSources } from './sources';
 import { StackedFavicons } from '~/components/Web/Sources';
-import { toolPanelSpacingClassName } from './disclosure';
 import { isError } from './ToolOutput/OutputRenderer';
-import parseJsonField from './Parts/parseJsonField';
-import { useToolCallIntent } from './Parts/intent';
+import { HeaderActionSlotContext } from './slot';
 import { useSearchContext } from '~/Providers';
 import SearchVerticals from './verticals';
-import { ROW_GLYPH_SLOT } from './rows';
+import { useLocalize } from '~/hooks';
 import ToolCall from './ToolCall';
 import cn from '~/utils/cn';
-import store from '~/store';
 
 type ProgressKeys =
   | 'com_ui_web_searching'
@@ -48,9 +55,9 @@ function SourceFaviconStack({ sources }: { sources: ValidSource[] }) {
         <div
           key={source.link}
           className={cn(
-            'relative flex items-center justify-center rounded-full border border-border-medium bg-surface-secondary',
-            'h-[22px] w-[22px]',
-            i > 0 && '-ml-2.5',
+            'border-border-medium bg-surface-secondary relative flex items-center justify-center rounded-full border',
+            'h-[1.375rem] w-[1.375rem]',
+            i > 0 && '-ms-2.5',
           )}
           style={{ zIndex: MAX_VISIBLE_FAVICONS - i }}
         >
@@ -86,6 +93,7 @@ export default function WebSearch({
   /** Model-authored live label (web_search carries `intent` natively);
    *  persists as the settled label like the other tool cards. */
   const intent = useToolCallIntent(args);
+  const preparationText = useToolPreparation();
   const { searchResults } = useSearchContext();
   const error = (typeof output === 'string' && isError(output)) || runStepStatus === 'failed';
   const legacyError =
@@ -187,6 +195,9 @@ export default function WebSearch({
    *  intent on every delta, so it always gets this value while streaming;
    *  the settled intent is announced once via the completed branch. */
   const genericProgressText = useMemo(() => {
+    if (preparationText != null) {
+      return preparationText;
+    }
     let text: ProgressKeys =
       ownTurn !== '0' ? 'com_ui_web_searching_again' : 'com_ui_web_searching';
     if (showSources) {
@@ -196,31 +207,28 @@ export default function WebSearch({
       text = 'com_ui_web_search_reading';
     }
     return localize(text);
-  }, [ownTurn, localize, showSources, finalizing]);
-  const progressText = intent ?? genericProgressText;
+  }, [ownTurn, localize, showSources, finalizing, preparationText]);
+  const progressText = preparationText ?? intent ?? genericProgressText;
 
-  const autoExpand = useRecoilValue(store.autoExpandTools);
+  const generatedLabel = useContext(GeneratedToolLabelContext);
+  const headerSlot = useContext(HeaderActionSlotContext);
+  const bare = generatedLabel && complete && !error && !cancelled && allSources.length > 0;
+  const rowRef = useRowHandoff(bare);
   const sourceCount = allSources.length;
   const [showDetails, setShowDetails] = useState(false);
-  const [showSourceList, setShowSourceList] = useState(() => autoExpand && sourceCount > 0);
+  useToolContentRequest(showDetails);
+  const [expandedSources, setShowSourceList] = useToolExpansion(sourceCount > 0);
+  const showSourceList = bare || expandedSources;
+  useToolContentRequest(bare);
   const { style: sourceExpandStyle, ref: sourceExpandRef } = useExpandCollapse(showSourceList);
   const { shouldRenderBody, mountBody, handleTransitionEnd } = useLazyCollapseBody(showSourceList);
 
-  useEffect(() => {
-    if (autoExpand && sourceCount > 0) {
-      setShowSourceList(true);
-    }
-  }, [autoExpand, sourceCount]);
-
   const handleToggleSources = () => {
     mountBody();
-    setShowSourceList((prev) => {
-      const next = !prev;
-      if (next) {
-        onExpand?.();
-      }
-      return next;
-    });
+    setShowSourceList(!showSourceList);
+    if (!showSourceList) {
+      onExpand?.();
+    }
   };
 
   if (error && runStepStatus !== 'cancelled') {
@@ -250,115 +258,123 @@ export default function WebSearch({
     const query = parseJsonField(args, 'query');
     const hasDetails = !!query || !!answerBox;
 
+    /** A generated title replaced the row, so its action moves to the title line. */
+    const inHeader = bare && headerSlot != null;
+    const details = (
+      <HoverCard openDelay={50} open={showDetails} onOpenChange={setShowDetails}>
+        {/* Composed through `asChild` so the shared Button owns the
+          rounding, hover fill, focus ring and motion (and gives a real
+          <button> instead of Radix's default anchor). Only the
+          hover-card reveal and the icon geometry stay local. */}
+        <HoverCardTrigger asChild>
+          <Button
+            variant="quiet"
+            size="icon"
+            className={cn(
+              'ms-auto size-auto cursor-help rounded-md p-1',
+              /** On the title line it sits beside the always-visible chevron. */
+              !inHeader &&
+                'opacity-0 group-focus-within/websearch:opacity-100 group-hover/websearch:opacity-100 focus-visible:opacity-100',
+            )}
+            onFocus={() => setShowDetails(true)}
+            onBlur={() => setShowDetails(false)}
+            aria-label={localize('com_ui_web_search_details')}
+          >
+            <Info className="size-3.5" aria-hidden="true" />
+          </Button>
+        </HoverCardTrigger>
+        <HoverCardPortal>
+          <HoverCardContent side="top" className="z-[999] w-80">
+            <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+              {query && (
+                <div>
+                  <div className="text-text-secondary text-3xs font-medium tracking-wide uppercase">
+                    {localize('com_ui_search_query')}
+                  </div>
+                  <div className="text-text-primary mt-0.5 text-sm">{query}</div>
+                </div>
+              )}
+              <div className="text-text-secondary text-xs">
+                {localize(
+                  sourceCount === 1 ? 'com_ui_web_search_source' : 'com_ui_web_search_sources',
+                  { count: sourceCount },
+                )}
+              </div>
+              {answerBox && (answerBox.title || answerText) && (
+                <div className="border-border-inset border-t pt-2">
+                  {answerBox.title && (
+                    <div className="text-text-primary text-sm font-medium">{answerBox.title}</div>
+                  )}
+                  {answerText && (
+                    <div className="text-text-secondary mt-1 text-xs leading-relaxed">
+                      {answerText}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </HoverCardContent>
+        </HoverCardPortal>
+      </HoverCard>
+    );
+
     return (
-      <div className="group/websearch my-1">
+      <div className={cn('group/websearch', bare && 'my-1.5')}>
         <span className="sr-only" aria-live="polite" aria-atomic="true">
           {completedText}
         </span>
-        <div className="relative flex h-5 items-center gap-1.5">
-          <Button
-            variant="ghost"
-            className={cn(
-              'tool-status-text group/disclosure h-5 min-w-0 justify-start gap-2 rounded-full p-0 font-normal text-text-secondary hover:bg-transparent',
-              /** This row is a status line, not a padded control: the shared
-               *  recipe's color transition would turn its hover into a fade,
-               *  and the chevron reveal beside it is deliberately instant. */
-              'transition-none',
-              !hasSourceData && 'pointer-events-none disabled:opacity-100',
-            )}
-            disabled={!hasSourceData}
-            onClick={hasSourceData ? handleToggleSources : undefined}
-            aria-expanded={hasSourceData ? showSourceList : undefined}
-            aria-label={
-              hasSourceData
-                ? `${completedText} - ${localize(sourceCount === 1 ? 'com_ui_web_search_source' : 'com_ui_web_search_sources', { count: sourceCount })}`
-                : completedText
-            }
-          >
-            <span className={ROW_GLYPH_SLOT} aria-hidden="true">
-              {hasSourceData ? (
-                <SourceFaviconStack sources={allSources} />
-              ) : (
-                <Globe className="size-4 shrink-0 text-text-secondary" />
+        <div className={cn('relative flex items-center gap-1.5', bare ? 'h-0' : 'my-1.5 h-5')}>
+          {!bare && (
+            <Button
+              ref={rowRef}
+              variant="disclosure"
+              className={cn(
+                'tool-status-text group/disclosure text-text-secondary h-5 min-w-0 rounded-full font-normal',
+                /** This row is a status line, not a padded control: the shared
+                 *  recipe's color transition would turn its hover into a fade,
+                 *  and the chevron reveal beside it is deliberately instant. */
+                'transition-none',
+                !hasSourceData && 'pointer-events-none disabled:opacity-100',
               )}
-            </span>
-            <span className="min-w-0 truncate font-medium">{completedText}</span>
-            {hasSourceData && (
-              <ChevronDown
-                className={cn(disclosureChevronVariants({ expanded: showSourceList }), 'size-3.5')}
-                aria-hidden="true"
-              />
-            )}
-          </Button>
-          {hasDetails && (
-            <HoverCard openDelay={50} open={showDetails} onOpenChange={setShowDetails}>
-              {/* Composed through `asChild` so the shared Button owns the
-                  rounding, hover fill, focus ring and motion (and gives a real
-                  <button> instead of Radix's default anchor). Only the
-                  hover-card reveal and the icon geometry stay local. */}
-              <HoverCardTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
+              disabled={!hasSourceData}
+              onClick={hasSourceData ? handleToggleSources : undefined}
+              aria-expanded={hasSourceData ? showSourceList : undefined}
+              aria-label={
+                hasSourceData
+                  ? `${completedText} - ${localize(sourceCount === 1 ? 'com_ui_web_search_source' : 'com_ui_web_search_sources', { count: sourceCount })}`
+                  : completedText
+              }
+            >
+              <span className={ROW_GLYPH_SLOT} aria-hidden="true">
+                {hasSourceData ? (
+                  <SourceFaviconStack sources={allSources} />
+                ) : (
+                  <Globe className="text-text-secondary size-4 shrink-0" />
+                )}
+              </span>
+              <span className="min-w-0 truncate font-medium">{completedText}</span>
+              {hasSourceData && (
+                <ChevronDown
                   className={cn(
-                    'ml-auto size-auto cursor-help rounded-md p-1 text-text-secondary opacity-0',
-                    'group-focus-within/websearch:opacity-100 group-hover/websearch:opacity-100',
-                    'focus-visible:opacity-100',
+                    disclosureChevronVariants({ expanded: showSourceList }),
+                    'ms-auto size-3.5',
                   )}
-                  onFocus={() => setShowDetails(true)}
-                  onBlur={() => setShowDetails(false)}
-                  aria-label={localize('com_ui_web_search_details')}
-                >
-                  <Info className="size-3.5" aria-hidden="true" />
-                </Button>
-              </HoverCardTrigger>
-              <HoverCardPortal>
-                <HoverCardContent side="top" className="z-[999] w-80">
-                  <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-                    {query && (
-                      <div>
-                        <div className="text-[10px] font-medium uppercase tracking-wide text-text-secondary">
-                          {localize('com_ui_search_query')}
-                        </div>
-                        <div className="mt-0.5 text-sm text-text-primary">{query}</div>
-                      </div>
-                    )}
-                    <div className="text-xs text-text-secondary">
-                      {localize(
-                        sourceCount === 1
-                          ? 'com_ui_web_search_source'
-                          : 'com_ui_web_search_sources',
-                        { count: sourceCount },
-                      )}
-                    </div>
-                    {answerBox && (answerBox.title || answerText) && (
-                      <div className="border-t border-border-light pt-2">
-                        {answerBox.title && (
-                          <div className="text-sm font-medium text-text-primary">
-                            {answerBox.title}
-                          </div>
-                        )}
-                        {answerText && (
-                          <div className="mt-1 text-xs leading-relaxed text-text-secondary">
-                            {answerText}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </HoverCardContent>
-              </HoverCardPortal>
-            </HoverCard>
+                  aria-hidden="true"
+                />
+              )}
+            </Button>
           )}
+          {hasDetails && !bare && details}
+          {hasDetails && inHeader && headerSlot && createPortal(details, headerSlot)}
         </div>
         {hasSourceData && (
           <div style={sourceExpandStyle} onTransitionEnd={handleTransitionEnd}>
-            <div className="overflow-hidden" ref={sourceExpandRef}>
+            <div className="min-h-0 overflow-hidden" ref={sourceExpandRef}>
               {shouldRenderBody && (
                 <div
                   className={cn(
                     toolPanelSpacingClassName,
-                    'mt-1.5 max-h-[280px] overflow-y-auto rounded-lg border border-border-light',
+                    'border-border-light mt-1.5 max-h-[17.5rem] overflow-y-auto rounded-lg border',
                   )}
                 >
                   {allSources.map((source, i) => {
@@ -371,9 +387,9 @@ export default function WebSearch({
                         target="_blank"
                         rel="noopener noreferrer"
                         className={cn(
-                          'flex gap-2.5 px-3 py-2 transition-colors hover:bg-surface-hover',
+                          'hover:bg-surface-hover flex gap-2.5 px-3 py-2 transition-colors',
                           snippet ? 'items-start' : 'items-center',
-                          i > 0 && 'border-t border-border-light',
+                          i > 0 && 'border-border-light border-t',
                         )}
                       >
                         <FaviconImage
@@ -381,19 +397,19 @@ export default function WebSearch({
                           className={cn('size-4 shrink-0 rounded-sm', snippet && 'mt-0.5')}
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-xs font-medium text-text-primary">
+                          <span className="text-text-primary block truncate text-xs font-medium">
                             {source.title || domain}
                           </span>
                           {snippet && (
-                            <span className="mt-0.5 line-clamp-2 block text-[11px] leading-relaxed text-text-secondary">
+                            <span className="text-text-secondary text-2xs mt-0.5 line-clamp-2 block leading-relaxed">
                               {snippet}
                             </span>
                           )}
                         </span>
-                        <span className="shrink-0 text-right">
-                          <span className="block text-[11px] text-text-secondary">{domain}</span>
+                        <span className="shrink-0 text-end">
+                          <span className="text-text-secondary text-2xs block">{domain}</span>
                           {source.date && (
-                            <span className="block text-[10px] text-text-secondary">
+                            <span className="text-text-secondary text-3xs block">
                               {source.date}
                             </span>
                           )}
@@ -412,15 +428,15 @@ export default function WebSearch({
   }
 
   return (
-    <div className="relative my-1 flex h-5 shrink-0 items-center gap-2">
+    <div className="relative my-1.5 flex h-5 shrink-0 items-center gap-2">
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {genericProgressText}
       </span>
       <span className={ROW_GLYPH_SLOT} aria-hidden="true">
         {showSources && <StackedFavicons sources={streamingSources} start={-5} />}
-        <Globe className="size-4 shrink-0 text-text-secondary" />
+        <Globe className="text-text-secondary size-4 shrink-0" />
       </span>
-      <span className="tool-status-text shimmer min-w-0 truncate font-medium text-text-secondary">
+      <span className="tool-status-text shimmer text-text-secondary min-w-0 truncate font-medium">
         {progressText}
       </span>
     </div>

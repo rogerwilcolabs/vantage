@@ -102,7 +102,9 @@ describe('Telemetry wiring', () => {
     const ingressIndex = source.indexOf(
       "app.use('/api/agents/chat', agentStartupIngressMiddleware);",
     );
-    const jsonParserIndex = source.indexOf("app.use(express.json({ limit: '3mb' }));");
+    const jsonParserIndex = source.indexOf(
+      "app.use(excludeRumBodyParser(express.json({ limit: '3mb' })));",
+    );
     const recorderIndex = source.indexOf(
       "app.use('/api/agents/chat', agentStartupTelemetryMiddleware);",
     );
@@ -111,6 +113,7 @@ describe('Telemetry wiring', () => {
 
     expect(ingressIndex).toBeGreaterThan(-1);
     expect(recorderIndex).toBeGreaterThan(-1);
+    expect(jsonParserIndex).toBeGreaterThan(-1);
     expect(ingressIndex).toBeLessThan(jsonParserIndex);
     expect(tracingIndex).toBeLessThan(recorderIndex);
     expect(recorderIndex).toBeLessThan(agentsRouteIndex);
@@ -171,7 +174,9 @@ describe('Startup readiness wiring', () => {
   });
 
   it('configures subagent task routing before the server accepts requests', () => {
-    const routingIndex = source.indexOf('await configureSubagentTaskRouting();');
+    const routingIndex = source.indexOf(
+      'await configureSubagentTaskRouting(appConfig?.endpoints?.agents?.subagentActivity);',
+    );
     const listenIndex = source.indexOf('const server = app.listen');
 
     expect(routingIndex).toBeGreaterThan(-1);
@@ -305,8 +310,10 @@ describe('Server Configuration', () => {
   });
 
   afterAll(async () => {
-    await promisify(server.close).call(server);
-    await mongoServer.stop();
+    if (server) {
+      await promisify(server.close).call(server);
+    }
+    await mongoServer?.stop();
     await mongoose.disconnect();
     delete process.env.CUSTOM_FOOTER;
   });
@@ -378,6 +385,22 @@ describe('Server Configuration', () => {
     const response = await request(app).get('/this/does/not/exist');
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toMatch(/html/);
+  });
+
+  it('serves the app shell at /oauth/error when a connect callback names an error', async () => {
+    const response = await request(app).get('/oauth/error?error=invalid_state&flow=flow-a');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toMatch(/html/);
+    expect(response.headers.location).toBeUndefined();
+    expect(response.text).toContain('<div id="root"></div>');
+  });
+
+  it('still sends a social login failure at /oauth/error to the login screen', async () => {
+    const response = await request(app).get('/oauth/error');
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toMatch(/\/login\?redirect=false&error=auth_failed$/);
   });
 
   it('should gate React Query Devtools config in SPA HTML by debug header', async () => {
