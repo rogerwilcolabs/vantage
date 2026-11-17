@@ -1,8 +1,9 @@
 const express = require('express');
 const { generateCheckAccess, createAgentCategoryHandlers } = require('@librechat/api');
 const { PermissionTypes, Permissions, PermissionBits } = require('librechat-data-provider');
+const { SystemCapabilities } = require('@librechat/data-schemas');
 const { configMiddleware, canAccessAgentResource } = require('~/server/middleware');
-const checkAdmin = require('~/server/middleware/roles/admin');
+const { requireCapability } = require('~/server/middleware/roles/capabilities');
 const v1 = require('~/server/controllers/agents/v1');
 const {
   getRoleByName,
@@ -19,6 +20,7 @@ const {
 } = require('~/models');
 const actions = require('./actions');
 const tools = require('./tools');
+const channels = require('./channels');
 
 const router = express.Router();
 const avatar = express.Router();
@@ -58,6 +60,7 @@ router.use('/actions', configMiddleware, actions);
  * @route GET /agents/tools
  */
 router.use('/tools', configMiddleware, tools);
+router.use('/:agentId/channels', channels);
 
 /**
  * Get all agent categories with counts
@@ -69,6 +72,8 @@ router.get('/categories', v1.getAgentCategories);
  * Admin-only management of agent categories.
  * Registered before the `/:id` routes so these paths aren't read as agent ids.
  */
+/** Managing categories and who can see them is agent administration (seeded for ADMIN). */
+const checkAdmin = requireCapability(SystemCapabilities.MANAGE_AGENTS);
 router.get('/categories/manage', checkAdmin, categories.list);
 router.post('/categories', checkAdmin, categories.create);
 router.put('/categories/order', checkAdmin, categories.reorder);

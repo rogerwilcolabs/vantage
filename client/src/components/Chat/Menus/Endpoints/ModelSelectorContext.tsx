@@ -1,11 +1,6 @@
 import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 import debounce from 'lodash/debounce';
-import {
-  EModelEndpoint,
-  PermissionBits,
-  isAgentsEndpoint,
-  isAssistantsEndpoint,
-} from 'librechat-data-provider';
+import { PermissionBits, isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type * as t from 'librechat-data-provider';
 import type { Endpoint, SelectedValues } from '~/common';
 import type { TranslationKeys } from '~/hooks';
@@ -22,6 +17,8 @@ import { DEFAULT_AGENT_CATEGORY, filterItems, groupAgentsByCategory } from './ut
 import { useGetEndpointsQuery, useListAgentsQuery } from '~/data-provider';
 import { useModelSelectorChatContext } from './ModelSelectorChatContext';
 import useSelectMention from '~/hooks/Input/useSelectMention';
+import { useCatalogReady } from '~/hooks/useCatalogWarmup';
+import useModelSpecs from '~/hooks/Agents/specs';
 
 type ModelSelectorContextType = {
   // State
@@ -62,6 +59,7 @@ interface ModelSelectorProviderProps {
 }
 
 export function ModelSelectorProvider({ children, startupConfig }: ModelSelectorProviderProps) {
+  const agentsReady = useCatalogReady('agents');
   const agentsMap = useAgentsMapContext();
   const assistantsMap = useAssistantsMapContext();
   const { data: endpointsConfig } = useGetEndpointsQuery();
@@ -69,25 +67,7 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     useModelSelectorChatContext();
   const localize = useLocalize();
   const { announcePolite } = useLiveAnnouncer();
-  const modelSpecs = useMemo(() => {
-    /** Labels are normalized at the startup-config query boundary. */
-    const specs = startupConfig?.modelSpecs?.list ?? [];
-    if (!agentsMap) {
-      return specs;
-    }
-
-    /**
-     * Filter modelSpecs to only include agents the user has access to.
-     * Use agentsMap which already contains permission-filtered agents (consistent with other components).
-     */
-    return specs.filter((spec) => {
-      if (spec.preset?.endpoint === EModelEndpoint.agents && spec.preset?.agent_id) {
-        return spec.preset.agent_id in agentsMap;
-      }
-      /** Keep non-agent modelSpecs */
-      return true;
-    });
-  }, [startupConfig, agentsMap]);
+  const modelSpecs = useModelSpecs(startupConfig);
 
   const permissionLevel = useAgentDefaultPermissionLevel();
   /**
@@ -113,13 +93,14 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     },
     [wantsEditableOnly],
   );
-  const { data: agents = null } = useListAgentsQuery(
+  const agentsQuery = useListAgentsQuery(
     { requiredPermission: PermissionBits.VIEW },
-    { select: selectAgents },
+    { select: selectAgents, enabled: agentsReady },
   );
 
   const { mappedEndpoints: endpoints, endpointRequiresUserKey } = useEndpoints({
-    agents,
+    agents: agentsQuery.data ?? null,
+    agentsQuery,
     assistantsMap,
     startupConfig,
     endpointsConfig,
@@ -134,8 +115,8 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
         ? localize(category.label as TranslationKeys)
         : category.label,
     }));
-    return groupAgentsByCategory(endpoints, agents, groups);
-  }, [endpoints, agents, categories, localize]);
+    return groupAgentsByCategory(endpoints, agentsQuery.data ?? null, groups);
+  }, [endpoints, agentsQuery.data, categories, localize]);
 
   const getModelDisplayName = useCallback(
     (endpoint: Endpoint, model: string): string => {

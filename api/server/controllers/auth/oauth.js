@@ -9,6 +9,7 @@ const {
 const { syncUserEntraGroupMemberships } = require('~/server/services/PermissionService');
 const { setAuthTokens } = require('~/server/services/AuthService');
 const { sendOpenIDAuthResponse } = require('~/server/services/OpenIDRefreshRecovery');
+const { getEmbedAuth } = require('~/server/services/EmbedAuth');
 const getLogStores = require('~/cache/getLogStores');
 const { checkBan } = require('~/server/middleware');
 const { generateToken } = require('~/models');
@@ -34,6 +35,11 @@ function createOAuthHandler(redirectUri = domains.client) {
 
       await checkBan(req, res);
       if (req.banned) {
+        return;
+      }
+
+      /** Sign-ins started from the embed popup hand off to the frame instead of setting cookies */
+      if (await (await getEmbedAuth()).completeLogin(req, res)) {
         return;
       }
 
@@ -66,7 +72,7 @@ function createOAuthHandler(redirectUri = domains.client) {
           expiresAt,
         );
         callbackUrl.searchParams.set('code', exchangeCode);
-        logger.info(`[OAuth] Admin panel redirect with exchange code for user: ${req.user.email}`);
+        logger.info(`[OAuth] Admin panel redirect with exchange code for user: ${req.user._id}`);
         return res.redirect(callbackUrl.toString());
       }
 

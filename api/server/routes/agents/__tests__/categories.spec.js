@@ -19,6 +19,15 @@ jest.mock('@librechat/api', () => ({
   createAgentCategoryHandlers: jest.fn(() => mockCategories),
 }));
 
+const mockRequireCapability = jest.fn(
+  () => (req, res, next) =>
+    req.user.role === 'ADMIN' ? next() : res.status(403).json({ message: 'Forbidden' }),
+);
+
+jest.mock('~/server/middleware/roles/capabilities', () => ({
+  requireCapability: (...args) => mockRequireCapability(...args),
+}));
+
 jest.mock('~/server/middleware', () => ({
   configMiddleware: (_req, _res, next) => next(),
   canAccessAgentResource: jest.fn(() => (_req, _res, next) => next()),
@@ -51,8 +60,11 @@ jest.mock('~/models', () => ({
 
 jest.mock('../actions', () => require('express').Router());
 jest.mock('../tools', () => require('express').Router());
+jest.mock('../channels', () => require('express').Router());
 
 const { v1 } = require('../v1');
+/** Captured now: the route guards are built at require time, before mocks reset per test. */
+const capabilityRequests = mockRequireCapability.mock.calls.map(([capability]) => capability);
 
 function createApp(role) {
   const app = express();
@@ -77,8 +89,8 @@ const managementRoutes = [
 ];
 
 describe('agent category routes', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+  it('guards category management with the agent management capability', () => {
+    expect(capabilityRequests).toContain('manage:agents');
   });
 
   it.each(managementRoutes)('%s %s refuses a non-admin', async (method, path, handler) => {
