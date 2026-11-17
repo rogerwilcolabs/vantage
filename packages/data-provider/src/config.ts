@@ -3891,6 +3891,8 @@ export function supportsConversationTitleOwnership(config?: {
 }
 
 export type TStartupConfig = {
+  /** Present only while `embed.enabled` is on. */
+  embed?: TEmbedClientConfig;
   conversationTitleOwnershipVersion?: typeof CONVERSATION_TITLE_OWNERSHIP_VERSION;
   appTitle: string;
   socialLogins?: string[];
@@ -4728,9 +4730,16 @@ export const embedConfigSchema = z.object({
     .min(5 * 60_000)
     .max(30 * 24 * 60 * 60_000)
     .default(7 * 24 * 60 * 60_000),
+  /** The embed view's own theme, a bundled name or an inline definition. Defaults to `interface.theme`. */
+  theme: deploymentThemeSchema.optional(),
+  /** Colour mode the embed view always uses, whatever the viewer picked. Defaults to the viewer's. */
+  colorMode: z.enum(['light', 'dark']).optional(),
 });
 
 export type TEmbedConfig = z.infer<typeof embedConfigSchema>;
+
+/** What the embed view needs from its config, sent in the startup config while embedding is on. */
+export type TEmbedClientConfig = Partial<Pick<TEmbedConfig, 'theme' | 'colorMode'>>;
 
 export const configSchema = z.object({
   persistence: persistenceConfigSchema,

@@ -1,6 +1,6 @@
 import { EMBED_BASE_PATH, embedConfigSchema } from 'librechat-data-provider';
+import type { TEmbedConfig, TEmbedClientConfig } from 'librechat-data-provider';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
-import type { TEmbedConfig } from 'librechat-data-provider';
 import type { CspPolicy } from '../security/csp';
 import { createCspPolicy } from '../security/csp';
 
@@ -23,6 +23,20 @@ export const isFramedEmbedPath = (path: string): boolean =>
  */
 export function resolveEmbedConfig(config: Partial<TEmbedConfig> | undefined): TEmbedConfig {
   return embedConfigSchema.parse(config ?? {});
+}
+
+/**
+ * The embed fields the client reads from the startup config, or `undefined` while embedding is
+ * off, so a deployment that never embeds sends nothing new. Both fields are display settings.
+ */
+export function getEmbedClientConfig(
+  rawConfig: Partial<TEmbedConfig> | undefined,
+): TEmbedClientConfig | undefined {
+  if (rawConfig?.enabled !== true) {
+    return undefined;
+  }
+  const { theme, colorMode } = rawConfig;
+  return { ...(theme != null && { theme }), ...(colorMode != null && { colorMode }) };
 }
 
 /** `'self'` plus the configured origins, deduplicated. */

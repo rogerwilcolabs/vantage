@@ -842,12 +842,22 @@
       "count": 7
     }
   },
+  "client/src/components/SidePanel/Agents/Categories.tsx": {
+    "shadcn/no-restyle": {
+      "count": 3
+    }
+  },
   "client/src/components/SidePanel/Agents/FileContext.tsx": {
     "design/disabled-recipe": {
       "count": 1
     },
     "shadcn/no-restyle": {
       "count": 14
+    }
+  },
+  "client/src/components/SidePanel/Agents/Groups.tsx": {
+    "shadcn/no-restyle": {
+      "count": 2
     }
   },
   "client/src/components/SidePanel/Agents/MCPIcon.tsx": {

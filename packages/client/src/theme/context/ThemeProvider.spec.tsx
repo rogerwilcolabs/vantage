@@ -1054,6 +1054,45 @@ describe('ThemeProvider', () => {
     expect(localStorage.getItem('theme-source')).toBeNull();
   });
 
+  describe('a forced scheme', () => {
+    it('applies the host scheme without storing it, and the user mode returns after', async () => {
+      localStorage.setItem('color-theme', 'light');
+      const { rerender } = render(
+        <ThemeProvider forcedScheme="dark">
+          <Controls />
+        </ThemeProvider>,
+      );
+
+      await waitFor(() => expect(document.documentElement).toHaveClass('dark'));
+      expect(document.documentElement).not.toHaveClass('light');
+      expect(screen.getByTestId('resolved-mode')).toHaveTextContent('dark');
+      expect(localStorage.getItem('color-theme')).toBe('light');
+
+      act(() => screen.getByRole('button', { name: 'Light' }).click());
+      expect(document.documentElement).toHaveClass('dark');
+
+      rerender(
+        <ThemeProvider>
+          <Controls />
+        </ThemeProvider>,
+      );
+      await waitFor(() => expect(document.documentElement).toHaveClass('light'));
+      expect(localStorage.getItem('color-theme')).toBe('light');
+    });
+
+    it('keeps a high-contrast choice in the forced scheme', async () => {
+      localStorage.setItem('color-theme', 'high-contrast-light');
+      render(
+        <ThemeProvider forcedScheme="dark">
+          <Controls />
+        </ThemeProvider>,
+      );
+
+      await waitFor(() => expect(document.documentElement).toHaveClass('dark', 'high-contrast'));
+      expect(screen.getByTestId('high-contrast')).toHaveTextContent('true');
+    });
+  });
+
   it('applies the high contrast light palette and marks the root element', async () => {
     render(
       <ThemeProvider initialTheme="light">

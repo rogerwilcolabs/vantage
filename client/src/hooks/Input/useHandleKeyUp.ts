@@ -6,6 +6,7 @@ import { PermissionTypes, Permissions, isAssistantsEndpoint } from 'librechat-da
 import { useGetLatestMessage } from '~/hooks/Messages/useLatestMessage';
 import useAgentCapabilities from '~/hooks/Agents/useAgentCapabilities';
 import useGetAgentsConfig from '~/hooks/Agents/useGetAgentsConfig';
+import { useEmbedContext } from '~/components/Embed/context';
 import useHasAccess from '~/hooks/Roles/useHasAccess';
 import store from '~/store';
 
@@ -79,8 +80,10 @@ const useHandleKeyUp = ({
   const setShowPromptsPopover = useSetRecoilState(store.showPromptsPopoverFamily(index));
   const setShowSkillsPopover = useSetAtom(showSkillsPopoverFamily(index));
 
-  const atCommandEnabled = useRecoilValue(store.atCommand);
-  const plusCommandEnabled = useRecoilValue(store.plusCommand);
+  /* The embed view is locked to one agent, so it offers no way to switch or add one. */
+  const embedded = useEmbedContext() != null;
+  const atCommandEnabled = useRecoilValue(store.atCommand) && !embedded;
+  const plusCommandEnabled = useRecoilValue(store.plusCommand) && !embedded;
   const slashCommandEnabled = useRecoilValue(store.slashCommand);
   const dollarCommandEnabled = useRecoilValue(store.dollarCommand);
 

@@ -13,7 +13,7 @@ import { notifyManager, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, MutationKeys, isBundledThemeName } from 'librechat-data-provider';
 import { ThemeProvider, fromLegacyTheme, validateThemeDefinition } from '@librechat/client';
 import type { TInterfaceConfig, TRefreshTokenResponse } from 'librechat-data-provider';
-import type { IThemeRGB, ThemeDefinition } from '@librechat/client';
+import type { IThemeRGB, ThemeDefinition, ThemeMode } from '@librechat/client';
 import type { ComponentProps } from 'react';
 import {
   themeOwner,
@@ -198,8 +198,11 @@ function useThemeCache(owner?: string) {
   return [cached, setCached] as const;
 }
 
-/** A route's own deployment theme source; `undefined` defers to the startup config. */
-type ThemeOverride = { theme: DeploymentThemeValue } | undefined;
+/**
+ * A route's own deployment theme source, and the colour scheme it requires, if any;
+ * `undefined` defers to the startup config.
+ */
+type ThemeOverride = { theme: DeploymentThemeValue; scheme?: ThemeMode } | undefined;
 
 const DeploymentThemeOverrideContext = createContext<(override: ThemeOverride) => void>(
   () => undefined,
@@ -215,12 +218,16 @@ const DeploymentThemeOverrideContext = createContext<(override: ThemeOverride) =
  * Registered in a layout effect so the wrapper re-renders in the same commit, and
  * `ThemeProvider` applies the change before that commit paints.
  */
-export function useDeploymentThemeOverride(ready: boolean, theme: DeploymentThemeValue) {
+export function useDeploymentThemeOverride(
+  ready: boolean,
+  theme: DeploymentThemeValue,
+  scheme?: ThemeMode,
+) {
   const setOverride = useContext(DeploymentThemeOverrideContext);
   useLayoutEffect(() => {
-    setOverride({ theme: ready ? theme : undefined });
+    setOverride(ready ? { theme, scheme } : { theme: undefined });
     return () => setOverride(undefined);
-  }, [ready, theme, setOverride]);
+  }, [ready, theme, scheme, setOverride]);
 }
 
 /**
@@ -318,6 +325,7 @@ export default function DeploymentTheme({ children }: { children: React.ReactNod
         themeName: storedTheme.name,
       }),
     ...(persistenceOff && { persistThemeDefinition: false }),
+    ...(override?.scheme && { forcedScheme: override.scheme }),
   };
 
   return (

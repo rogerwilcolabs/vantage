@@ -6,11 +6,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { SettingDefinition, TConversation, TReasoningOverride } from 'librechat-data-provider';
 import type { QueuedMessage } from '@librechat/chat';
 import type * as ReasoningModule from '../../Reasoning';
+import { EmbedContext } from '~/components/Embed/context';
 import { effortRank, leanFor } from '../Effort';
 import Thinking from '../Thinking';
 
 const mockSetValue = jest.fn();
 let mockPendingOverride: TReasoningOverride | undefined;
+let mockReasoningEnabled: boolean | undefined;
 let mockSetting = {
   key: 'reasoning_effort',
   type: 'enum',
@@ -27,17 +29,26 @@ const mockChatContext = React.createContext<{ conversation: TConversation | null
 
 jest.mock('../../Reasoning', () => ({
   ReasoningControl: jest.requireActual<typeof ReasoningModule>('../../Reasoning').ReasoningControl,
-  useComposerReasoning: ({ branchReasoning }: { branchReasoning?: TReasoningOverride }) => ({
-    setting: mockSetting,
-    value:
-      mockPendingOverride ??
-      branchReasoning ??
-      ({
-        key: mockSetting.key,
-        value: mockConversation[mockSetting.key as keyof TConversation] ?? mockSetting.default,
-      } as TReasoningOverride),
-    setValue: mockSetValue,
-  }),
+  useComposerReasoning: ({
+    branchReasoning,
+    enabled,
+  }: {
+    branchReasoning?: TReasoningOverride;
+    enabled?: boolean;
+  }) => {
+    mockReasoningEnabled = enabled;
+    return {
+      setting: mockSetting,
+      value:
+        mockPendingOverride ??
+        branchReasoning ??
+        ({
+          key: mockSetting.key,
+          value: mockConversation[mockSetting.key as keyof TConversation] ?? mockSetting.default,
+        } as TReasoningOverride),
+      setValue: mockSetValue,
+    };
+  },
 }));
 
 jest.mock('@librechat/chat/react', () => ({
@@ -108,6 +119,20 @@ describe('Thinking', () => {
       conversationId: 'convo-1',
       reasoning_effort: 'low',
     } as unknown as TConversation;
+  });
+
+  it('offers no control in the embed view and stages nothing, so the agent default applies', () => {
+    render(
+      <EmbedContext.Provider value={{ agentId: 'a', agentUnavailable: false, signOut: jest.fn() }}>
+        <mockChatContext.Provider value={{ conversation: mockConversation }}>
+          <Thinking index={0} disabled={false} hasAddedConversation={false} />
+        </mockChatContext.Provider>
+      </EmbedContext.Provider>,
+    );
+
+    expect(screen.queryByTestId('composer-thinking-button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Thinking/ })).not.toBeInTheDocument();
+    expect(mockReasoningEnabled).toBe(false);
   });
 
   it('forwards the composer disabled state to the enum control', () => {

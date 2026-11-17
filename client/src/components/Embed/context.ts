@@ -2,8 +2,12 @@ import { createContext, useContext } from 'react';
 import type { Agent } from 'librechat-data-provider';
 
 export type EmbedContextValue = {
-  /** The agents this embed offers, sorted by name. */
-  agents: Agent[];
+  /** The one agent this embed offers; `undefined` while it loads or when it is unavailable. */
+  agent?: Agent;
+  /** The agent id the embed was opened with, which every chat in the view must use. */
+  agentId?: string;
+  /** The agent could not be loaded for this viewer: missing, not shared with them, or failing. */
+  agentUnavailable: boolean;
   signOut: () => void;
 };
 

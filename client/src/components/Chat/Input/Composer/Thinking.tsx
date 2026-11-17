@@ -5,6 +5,7 @@ import { queuedMessagesByConvoId } from '@librechat/chat/react';
 import { Constants, reasoningSettingKeys } from 'librechat-data-provider';
 import { getBranchReasoning, getAppendParentMessageId } from '@librechat/chat';
 import { ReasoningControl, useComposerReasoning } from '../Reasoning';
+import { useEmbedContext } from '~/components/Embed/context';
 import { useGetStartupConfig } from '~/data-provider';
 import { useChatContext } from '~/Providers';
 import { getModelSpec } from '~/utils';
@@ -32,7 +33,10 @@ const REASONING_KEYS: ReadonlySet<string> = new Set(reasoningSettingKeys);
 function Thinking({ index, disabled, hasAddedConversation }: ThinkingProps) {
   const { conversation, latestMessageId, getMessages } = useChatContext();
   const { data: startupConfig } = useGetStartupConfig();
-  const parametersEnabled = startupConfig?.interface?.parameters;
+  /* The embed view always runs its agent at the agent's own reasoning level: the control is
+   * hidden, and a disabled hook also clears any level staged for the conversation. */
+  const embedded = useEmbedContext() != null;
+  const parametersEnabled = embedded ? false : startupConfig?.interface?.parameters;
   const specName = conversation?.spec;
   const modelSpec = getModelSpec({ specName, startupConfig });
   const enforced = startupConfig?.modelSpecs?.enforce === true;

@@ -2227,4 +2227,17 @@ describe('embedConfigSchema', () => {
       expect(embedConfigSchema.safeParse({ frameAncestors: [origin] }).success).toBe(false);
     }
   });
+
+  it('accepts its own theme and a fixed colour mode, and rejects other modes', () => {
+    const theme = {
+      version: 1,
+      name: 'embed',
+      modes: { dark: { colors: { 'rgb-presentation': '57 74 89' } } },
+    };
+    const parsed = embedConfigSchema.parse({ theme, colorMode: 'dark' });
+    expect(parsed.theme).toEqual(theme);
+    expect(parsed.colorMode).toBe('dark');
+    expect(embedConfigSchema.parse({ theme: 'clickhouse' }).theme).toBe('clickhouse');
+    expect(embedConfigSchema.safeParse({ colorMode: 'system' }).success).toBe(false);
+  });
 });

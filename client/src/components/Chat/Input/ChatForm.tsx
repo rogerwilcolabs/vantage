@@ -71,6 +71,7 @@ import { useChatSettings } from '~/Providers/ChatSettingsContext';
 import usePastedTextEdit from '~/hooks/Files/usePastedTextEdit';
 import useAskAnswerMode from '~/hooks/Input/useAskAnswerMode';
 import AskUserQuestionPopover from './AskUserQuestionPopover';
+import { useEmbedContext } from '~/components/Embed/context';
 import { useTargetContext } from '~/Providers/TargetContext';
 import useAttachTarget from '~/hooks/Input/useAttachTarget';
 import { chatDirectionAtom } from '~/store/chatDirection';
@@ -455,7 +456,9 @@ const ChatForm = memo(function ChatForm({
     permission: Permissions.USE,
   });
   const slashCommandEnabled = useRecoilValue(store.slashCommand);
-  const atCommandEnabled = useRecoilValue(store.atCommand);
+  /* The embed view is locked to one agent, so it offers no way to switch or add one. */
+  const embedded = useEmbedContext() != null;
+  const atCommandEnabled = useRecoilValue(store.atCommand) && !embedded;
   const idleActions = useMemo(
     () => ({
       prompts: hasPromptsAccess && slashCommandEnabled,
@@ -684,21 +687,25 @@ const ChatForm = memo(function ChatForm({
       }
       popovers={
         <>
-          <Mention
-            index={index}
-            popoverAtom={plusPopoverAtom}
-            newConversation={generateConversation}
-            textAreaRef={textAreaRef}
-            commandChar="+"
-            placeholder="com_ui_add_model_preset"
-            includeAssistants={false}
-          />
-          <Mention
-            index={index}
-            popoverAtom={mentionPopoverAtom}
-            newConversation={newConversation}
-            textAreaRef={textAreaRef}
-          />
+          {!embedded && (
+            <>
+              <Mention
+                index={index}
+                popoverAtom={plusPopoverAtom}
+                newConversation={generateConversation}
+                textAreaRef={textAreaRef}
+                commandChar="+"
+                placeholder="com_ui_add_model_preset"
+                includeAssistants={false}
+              />
+              <Mention
+                index={index}
+                popoverAtom={mentionPopoverAtom}
+                newConversation={newConversation}
+                textAreaRef={textAreaRef}
+              />
+            </>
+          )}
           <PromptsCommand index={index} textAreaRef={textAreaRef} submitPrompt={submitPrompt} />
           {index === 0 && (
             <AskUserQuestionPopover conversationId={conversationId} textAreaRef={textAreaRef} />

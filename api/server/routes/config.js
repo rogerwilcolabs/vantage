@@ -28,6 +28,7 @@ const {
   resolvePullRequestCapabilities,
   resolvePreLoginAppConfig,
   withSafePolicyLinks,
+  getEmbedClientConfig,
 } = require('@librechat/api');
 const {
   DEFAULT_MCP_APP_CSP_LIMITS,
@@ -244,6 +245,7 @@ router.get('/', async function (req, res) {
         turnstile: baseConfig?.turnstileConfig,
         rum: getRumConfig(baseConfig?.config?.telemetry),
         clientLimits: getClientLimits(baseConfig?.config?.clientLimits),
+        embed: getEmbedClientConfig(baseConfig?.embed),
       };
 
       const interfaceConfig = baseConfig?.interfaceConfig;
@@ -322,6 +324,7 @@ router.get('/', async function (req, res) {
       socialLogins: appConfig?.registration?.socialLogins ?? defaultSocialLogins,
       projects: appConfig?.projects,
       interface: withSafePolicyLinks(appConfig?.interfaceConfig),
+      embed: getEmbedClientConfig(appConfig?.embed),
       titleGenerationTiming: resolveTitleTiming({
         appConfig,
         endpoint: EModelEndpoint.agents,

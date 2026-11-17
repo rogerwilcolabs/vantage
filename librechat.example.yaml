@@ -199,6 +199,25 @@ projects:
 #         # first, or use a new source id for the new tenant.
 #         # tenantId: your-tenant-id
 
+# Chat-only view that other sites can iframe at /embed?agent_id=<agent id>. It shows only that
+# agent and signs viewers in through a popup (requires OpenID). Off unless enabled.
+# embed:
+#   enabled: true
+#   # Sites allowed to frame /embed: https:// origins without a path, or 'self'.
+#   frameAncestors:
+#     - 'https://lookerstudio.google.com'
+#   # Optional. The embed view's own theme, same format as interface.theme; defaults to it.
+#   theme:
+#     version: 1
+#     name: embed
+#     modes:
+#       dark:
+#         colors:
+#           rgb-presentation: '57 74 89'
+#           rgb-surface-canvas: '57 74 89'
+#   # Optional. 'light' or 'dark' to fix the embed's colour mode; defaults to the viewer's own.
+#   colorMode: dark
+
 # Custom interface configuration
 interface:
   customWelcome: 'Welcome to LibreChat! Enjoy your experience.'

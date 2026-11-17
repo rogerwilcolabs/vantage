@@ -642,7 +642,6 @@
   "com_embed_no_agents": "No assistant is available to your account here",
   "com_embed_no_agents_description": "Ask your administrator to give your account access.",
   "com_embed_popup_blocked": "Your browser blocked the sign-in window. Allow pop-ups for this page, then try again.",
-  "com_embed_select_agent": "Choose an assistant",
   "com_embed_sign_in": "Sign in",
   "com_embed_sign_in_description": "Use your work account to chat with your assistant.",
   "com_embed_sign_in_failed": "Sign-in didn't complete. Try again.",

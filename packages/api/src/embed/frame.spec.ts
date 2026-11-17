@@ -3,7 +3,7 @@ import express from 'express';
 import request from 'supertest';
 import type { Response } from 'express';
 import type { EmbedFrameLocals } from './frame';
-import { createEmbedFrameHeaders, isFramedEmbedPath } from './frame';
+import { createEmbedFrameHeaders, getEmbedClientConfig, isFramedEmbedPath } from './frame';
 
 const config = { enabled: true, frameAncestors: ['https://lookerstudio.google.com'] };
 
@@ -57,5 +57,24 @@ describe('createEmbedFrameHeaders', () => {
     expect(isFramedEmbedPath('/embed/c/abc')).toBe(true);
     expect(isFramedEmbedPath('/embed/callback')).toBe(false);
     expect(isFramedEmbedPath('/embedx')).toBe(false);
+  });
+});
+
+describe('getEmbedClientConfig', () => {
+  it('sends nothing while embedding is off', () => {
+    expect(getEmbedClientConfig(undefined)).toBeUndefined();
+    expect(getEmbedClientConfig({ enabled: false, colorMode: 'dark' })).toBeUndefined();
+  });
+
+  it('sends only the display settings, never the frame list or session lifetimes', () => {
+    expect(
+      getEmbedClientConfig({
+        ...config,
+        theme: 'clickhouse',
+        colorMode: 'dark',
+        handoffTtlMs: 60_000,
+      }),
+    ).toEqual({ theme: 'clickhouse', colorMode: 'dark' });
+    expect(getEmbedClientConfig(config)).toEqual({});
   });
 });

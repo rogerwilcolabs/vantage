@@ -4,6 +4,8 @@ import { EmbedCallback, EmbedEntry, EmbedRoot, readEmbedSelection } from '~/comp
 import { AuthContextProvider } from '~/hooks/AuthContext';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import ChatRoute from './ChatRoute';
+import ChatHosts from './ChatHosts';
+import ChatRecord from './Record';
 
 /** The embed view has its own sign-in screen, so a missing session never navigates to /login. */
 const embedAuthConfig = { loginRedirect: EMBED_BASE_PATH, optional: true };
@@ -16,9 +18,13 @@ export function isEmbedPathname(pathname: string, baseHref: string): boolean {
   return pathname === embedPath || pathname.startsWith(`${embedPath}/`);
 }
 
+/** The same chat hosts as the full app's root, so the chat route finds everything it reads. */
 const EmbedAuthLayout = () => (
   <AuthContextProvider authConfig={embedAuthConfig}>
-    <Outlet />
+    <ChatRecord />
+    <ChatHosts>
+      <Outlet />
+    </ChatHosts>
   </AuthContextProvider>
 );
 

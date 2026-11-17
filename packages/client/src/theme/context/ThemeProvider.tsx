@@ -132,6 +132,12 @@ export interface ThemeProviderProps {
   persistThemeDefinition?: boolean;
   themeName?: string;
   initialTheme?: string;
+  /**
+   * A colour scheme the host requires (`light` or `dark`), applied over the user's mode without
+   * being stored, so the user's own choice returns once the host lets go. A high-contrast mode
+   * keeps its contrast in the forced scheme.
+   */
+  forcedScheme?: ThemeMode;
 }
 
 /**
@@ -188,6 +194,14 @@ export const resolvesToHighContrast = (theme: string): boolean =>
 
 const isAppearanceMode = (value: string): value is AppearanceMode =>
   themeModes.includes(value as AppearanceMode);
+
+/** The mode to apply when a host forces a scheme: the user's contrast, the host's scheme. */
+const withForcedScheme = (theme: AppearanceMode, scheme?: ThemeMode): AppearanceMode => {
+  if (scheme !== 'light' && scheme !== 'dark') {
+    return theme;
+  }
+  return resolvesToHighContrast(theme) ? `high-contrast-${scheme}` : scheme;
+};
 
 const isValidThemeColors = (value: unknown): value is IThemeRGB => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -473,6 +487,7 @@ export function ThemeProvider({
   persistThemeDefinition = true,
   themeName: propThemeName,
   initialTheme,
+  forcedScheme,
 }: ThemeProviderProps): JSX.Element {
   const initialThemeState = useRef<InitialThemeState | undefined>(undefined);
   if (!initialThemeState.current) {
@@ -782,12 +797,14 @@ export function ThemeProvider({
     [legacyThemeRGB, prepareThemeDOM, restoreAppliedTheme, themeDefinition],
   );
 
+  const appliedTheme = withForcedScheme(theme, forcedScheme);
+
   useBeforePaintEffect(() => {
-    applyThemeMode(theme);
-  }, [applyThemeMode, theme]);
+    applyThemeMode(appliedTheme);
+  }, [applyThemeMode, appliedTheme]);
 
   useEffect(() => {
-    if (theme !== 'system') {
+    if (appliedTheme !== 'system') {
       return;
     }
 
@@ -803,7 +820,7 @@ export function ThemeProvider({
     const handleChange = () => applyThemeMode('system');
     queries.forEach((query) => query.addEventListener('change', handleChange));
     return () => queries.forEach((query) => query.removeEventListener('change', handleChange));
-  }, [applyThemeMode, theme]);
+  }, [applyThemeMode, appliedTheme]);
 
   useEffect(
     () => () => {

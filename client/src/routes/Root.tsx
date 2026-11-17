@@ -33,11 +33,7 @@ import {
   CodeHighlightThrottleContext,
   normalizeCodeHighlightThrottleMs,
 } from '~/components/Chat/Messages/Content/Parts/useLazyHighlight';
-import { ComposerHostProvider, appComposerHost } from '~/Providers/ComposerHostContext';
-import { StreamHostProvider, appStreamHost } from '~/Providers/StreamHostContext';
 import KeyboardShortcutsDialog from '~/components/Nav/KeyboardShortcutsDialog';
-import { SteerHostProvider, appSteerHost } from '~/Providers/SteerHostContext';
-import { ChatHostProvider, appChatHost } from '~/Providers/ChatHostContext';
 import KeyboardDeleteDialog from '~/components/Nav/KeyboardDeleteDialog';
 import { useUserTermsQuery, useGetStartupConfig } from '~/data-provider';
 import { MobileDrawerScrim } from '~/components/UnifiedSidebar/mobile';
@@ -48,10 +44,10 @@ import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import useSidebarState from '~/hooks/Nav/useSidebarState';
 import { TermsAndConditionsModal } from '~/components/ui';
 import useDrawerSwipe from '~/hooks/Nav/useDrawerSwipe';
-import ChatSettingsProvider from './ChatSettings';
 import { useHealthCheck } from '~/data-provider';
 import Settings from '~/components/Nav/Settings';
 import { Banner } from '~/components/Banners';
+import ChatHosts from './ChatHosts';
 import ChatRecord from './Record';
 import store from '~/store';
 
@@ -276,17 +272,9 @@ export default function Root() {
   return (
     <>
       <ChatRecord />
-      <ChatSettingsProvider>
-        <SteerHostProvider host={appSteerHost}>
-          <ChatHostProvider host={appChatHost}>
-            <StreamHostProvider host={appStreamHost}>
-              <ComposerHostProvider host={appComposerHost}>
-                <RootLayout />
-              </ComposerHostProvider>
-            </StreamHostProvider>
-          </ChatHostProvider>
-        </SteerHostProvider>
-      </ChatSettingsProvider>
+      <ChatHosts>
+        <RootLayout />
+      </ChatHosts>
     </>
   );
 }
